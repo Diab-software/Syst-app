@@ -7,16 +7,15 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from cryptography.fernet import Fernet
 import pyotp, qrcode
-from io import BytesIO
 
 app = Flask(__name__)
-app.secret_key = 'syst-ultimate-secret-key-change-in-production'
+app.secret_key = 'syst-ultimate-secret-key'
 
 # ========== الإعدادات ==========
 UPLOAD_FOLDER = 'uploads'
 PROFILE_FOLDER = 'uploads/profiles'
 STORY_FOLDER = 'uploads/stories'
-ALLOWED_EXTENSIONS = {'png','jpg','jpeg','gif','bmp','webp','mp4','webm','mov','avi','mkv','mp3','wav','ogg','pdf','txt','zip','rar','doc','docx'}
+ALLOWED_EXTENSIONS = {'png','jpg','jpeg','gif','bmp','webp','mp4','webm','mov','avi','mkv','mp3','wav','ogg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
@@ -37,14 +36,10 @@ else:
     with open(key_file, 'wb') as f: f.write(ENCRYPTION_KEY)
 cipher = Fernet(ENCRYPTION_KEY)
 
-def encrypt(t):
-    return cipher.encrypt(t.encode()).decode() if t else t
-
+def encrypt(t): return cipher.encrypt(t.encode()).decode() if t else t
 def decrypt(t):
-    try:
-        return cipher.decrypt(t.encode()).decode() if t else t
-    except:
-        return "[مشفر]"
+    try: return cipher.decrypt(t.encode()).decode() if t else t
+    except: return "[مشفر]"
 
 # ========== النماذج ==========
 class User(db.Model):
@@ -85,15 +80,10 @@ class User(db.Model):
     def get_blocked_list(self):
         return [int(i) for i in self.blocked_users.split(',') if i.isdigit()] if self.blocked_users else []
 
-    def set_password(self, p):
-        self.password_hash = generate_password_hash(p)
-    def check_password(self, p):
-        return check_password_hash(self.password_hash, p)
-    def enable_2fa(self):
-        self.otp_secret = pyotp.random_base32()
-        return self.otp_secret
-    def disable_2fa(self):
-        self.otp_secret = None
+    def set_password(self, p): self.password_hash = generate_password_hash(p)
+    def check_password(self, p): return check_password_hash(self.password_hash, p)
+    def enable_2fa(self): self.otp_secret = pyotp.random_base32(); return self.otp_secret
+    def disable_2fa(self): self.otp_secret = None
     def verify_otp(self, code):
         if not self.otp_secret: return False
         return pyotp.TOTP(self.otp_secret).verify(code)
@@ -116,11 +106,9 @@ class Message(db.Model):
     private_user = db.relationship('User', foreign_keys=[private_with])
 
     @property
-    def content(self):
-        return decrypt(self.content_encrypted)
+    def content(self): return decrypt(self.content_encrypted)
     @content.setter
-    def content(self, plaintext):
-        self.content_encrypted = encrypt(plaintext)
+    def content(self, plaintext): self.content_encrypted = encrypt(plaintext)
 
     def is_deleted_for(self, user_id):
         if not self.deleted_by: return False
@@ -198,9 +186,6 @@ def get_user_contacts(user_id):
 
 def format_last_seen(dt):
     if not dt: return "غير معروف"
-    # التأكد من أن dt هو aware (له منطقة زمنية)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
     diff = now - dt
     if diff.total_seconds() < 60: return "منذ لحظات"
@@ -213,6 +198,10 @@ def format_last_seen(dt):
     else:
         days = int(diff.total_seconds() // 86400)
         return f"منذ {days} يوم"
+
+# ========== المسارات ==========
+@app.route('/')
+def home():
     return redirect(url_for('dashboard' if 'username' in session else 'login'))
 
 @app.route('/login', methods=['GET','POST'])
@@ -538,11 +527,13 @@ def upload_profile_pic():
     if not allowed_file(file.filename):
         flash('نوع الملف غير مسموح', 'danger')
         return redirect(url_for('settings'))
+    # حذف الصورة القديمة
     if user.profile_pic:
         old_path = os.path.join(PROFILE_FOLDER, user.profile_pic)
         if os.path.exists(old_path):
             try: os.remove(old_path)
             except: pass
+    # حفظ الصورة الجديدة
     filename = secure_filename(file.filename)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"profile_{user.id}_{timestamp}_{filename}"
@@ -551,10 +542,6 @@ def upload_profile_pic():
     user.profile_pic = unique_filename
     db.session.commit()
     flash('✅ تم تحديث الصورة الشخصية', 'success')
-    return redirect(url_for('settings'))
-
-@app.route('/upload_story', methods=['POST'])
-def upload_story():
     if 'username' not in session:
         flash('يجب تسجيل الدخول', 'danger')
         return redirect(url_for('login'))
@@ -565,6 +552,7 @@ def upload_story():
     story_type = request.form.get('story_type', 'media')
     caption = request.form.get('caption', '').strip()
     content_text = request.form.get('content_text', '').strip()
+    
     if story_type == 'text':
         if not content_text:
             flash('يرجى إدخال نص القصة', 'danger')
@@ -574,6 +562,8 @@ def upload_story():
         db.session.commit()
         flash('تم نشر القصة النصية', 'success')
         return redirect(url_for('dashboard'))
+    
+    # رفع ملف (صورة/فيديو)
     if 'story_media' not in request.files:
         flash('لا يوجد ملف', 'danger')
         return redirect(url_for('dashboard'))
@@ -584,36 +574,24 @@ def upload_story():
     if not allowed_file(file.filename):
         flash('نوع الملف غير مسموح', 'danger')
         return redirect(url_for('dashboard'))
+    
     filename = secure_filename(file.filename)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"story_{user.id}_{timestamp}_{filename}"
     file_path = os.path.join(STORY_FOLDER, unique_filename)
     file.save(file_path)
     media_type = file_type(filename)
-    story = Story(user_id=user.id, media_path=unique_filename, media_type=media_type, caption=caption)
+    
+    story = Story(
+        user_id=user.id,
+        media_path=unique_filename,  # حفظ اسم الملف فقط
+        media_type=media_type,
+        caption=caption
+    )
     db.session.add(story)
     db.session.commit()
     flash('✅ تم نشر القصة', 'success')
-    return redirect(url_for('dashboard'))
-
-@app.route('/none')
-def none_image():
-    from flask import send_file
-    from io import BytesIO
-    img = BytesIO()
-    img.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82')
-    img.seek(0)
-    return send_file(img, mimetype='image/png')
-
-@app.route('/profiles/<filename>')
-def download_profile_pic(filename):
-    return send_from_directory(PROFILE_FOLDER, filename)
-
-@app.route('/stories/<filename>')
-def download_story(filename):
-    return send_from_directory(STORY_FOLDER, filename)
-
-@app.route('/delete_message/<int:message_id>', methods=['POST'])
+    return redirect(url_for('dashboard'))@app.route('/delete_message/<int:message_id>', methods=['POST'])
 def delete_message(message_id):
     if 'username' not in session: return jsonify({'error': 'غير مسجل'}), 401
     user = User.query.filter_by(username=session['username']).first()
@@ -704,30 +682,10 @@ def view_story(story_id):
     if 'username' not in session: return redirect(url_for('login'))
     story = Story.query.get(story_id)
     if not story: flash('القصة غير موجودة', 'danger'); return redirect(url_for('dashboard'))
-    if story.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if story.expires_at < datetime.now(timezone.utc):
         flash('انتهت صلاحية القصة', 'info')
         return redirect(url_for('dashboard'))
     return render_template('view_story.html', story=story)
-
-# ========== صفحة البروفايل ==========
-@app.route('/profile')
-def profile():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    user = User.query.filter_by(username=session['username']).first()
-    if not user or user.deleted:
-        return redirect(url_for('login'))
-    private_users = get_user_contacts(user.id)
-    groups = Group.query.join(GroupMembership).filter(GroupMembership.user_id == user.id).all()
-    blocked_users = User.query.filter(User.id.in_(user.get_blocked_list())).all()
-    return render_template('profile.html',
-                           username=session['username'],
-                           display_name=user.display_name,
-                           user=user,
-                           private_users=private_users,
-                           groups=groups,
-                           blocked_users=blocked_users,
-                           format_last_seen=format_last_seen)
 
 # ========== WebSocket ==========
 @socketio.on('connect')
@@ -832,6 +790,332 @@ def handle_signal(data):
     if not from_user or not target: return
     emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
 
-# ========== تشغيل التطبيق ==========
+@app.route("/none")
+    img.write(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82")
+    img.seek(0)
+    return send_file(img, mimetype="image/png")
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=7070, debug=True, allow_unsafe_werkzeug=True)
+
+# ===== صورة افتراضية للـ None =====
+@app.route('/none')
+    # إنشاء صورة فارغة 1x1 بكسل
+    img.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82')
+    img.seek(0)
+    return send_file(img, mimetype='image/png')
+
+# ===== صورة افتراضية للـ None =====
+@app.route('/none')
+    # إنشاء صورة فارغة 1x1 بكسل (PNG)
+    img = BytesIO()
+    img.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82')
+    img.seek(0)
+    return send_file(img, mimetype='image/png')
+
+# ===== رفع قصة =====
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    
+    # رفع ملف (صورة/فيديو)
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    
+    story = Story(
+        user_id=user.id,
+        media_path=unique_filename,
+        media_type=media_type,
+        caption=caption
+    )
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+# ===== رفع القصة =====
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    
+    # رفع ملف (صورة/فيديو)
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    
+    story = Story(
+        user_id=user.id,
+        media_path=unique_filename,  # حفظ اسم الملف فقط
+        media_type=media_type,
+        caption=caption
+    )
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    story = Story(user_id=user.id, media_path=unique_filename, media_type=media_type, caption=caption)
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+# ===== مسار الصورة الافتراضية =====
+@app.route('/none')
+    img = BytesIO()
+    img.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82')
+    img.seek(0)
+    return send_file(img, mimetype='image/png')
+
+# ===== رفع القصة =====
+@app.route('/upload_story', methods=['POST'])
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    story = Story(user_id=user.id, media_path=unique_filename, media_type=media_type, caption=caption)
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/none')
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    story = Story(user_id=user.id, media_path=unique_filename, media_type=media_type, caption=caption)
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/none')
+    if 'username' not in session:
+        flash('يجب تسجيل الدخول', 'danger')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or user.deleted:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('login'))
+    story_type = request.form.get('story_type', 'media')
+    caption = request.form.get('caption', '').strip()
+    content_text = request.form.get('content_text', '').strip()
+    if story_type == 'text':
+        if not content_text:
+            flash('يرجى إدخال نص القصة', 'danger')
+            return redirect(url_for('dashboard'))
+        story = Story(user_id=user.id, media_type='text', caption=caption, content_text=content_text)
+        db.session.add(story)
+        db.session.commit()
+        flash('تم نشر القصة النصية', 'success')
+        return redirect(url_for('dashboard'))
+    if 'story_media' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    file = request.files['story_media']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"story_{user.id}_{timestamp}_{filename}"
+    file_path = os.path.join(STORY_FOLDER, unique_filename)
+    file.save(file_path)
+    media_type = file_type(filename)
+    story = Story(user_id=user.id, media_path=unique_filename, media_type=media_type, caption=caption)
+    db.session.add(story)
+    db.session.commit()
+    flash('✅ تم نشر القصة', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/none')
+
+@app.route('/none')
+
+@app.route('/none')
+
+@app.route("/none")
+
+@app.route('/none')
+
+@app.route("/none")
+def none_image():
+    from flask import send_file
+    from io import BytesIO
+    img = BytesIO()
+    img.write(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82")
+    img.seek(0)
+    return send_file(img, mimetype="image/png")
+
+@app.route('/none')
+def none_image():
+    from flask import send_file
+    from io import BytesIO
+    img = BytesIO()
+    img.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04\x00\x01\x87\x1bU\xd2\x00\x00\x00\x00IEND\xaeB`\x82')
+    img.seek(0)
+    return send_file(img, mimetype='image/png')
