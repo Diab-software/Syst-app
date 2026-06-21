@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>القصص - Syst</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .stories-page {
+            min-height: 100vh;
+            background: var(--bg);
+            padding: 20px;
+        }
+        .stories-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .stories-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .stories-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stories-header h1 .badge {
+            font-size: 14px;
+            background: #f5576c;
+            color: white;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        .stories-header .back-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stories-header .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(108,99,255,0.3);
+        }
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .story-card {
+            background: var(--card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .story-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+        }
+        .story-card .story-thumb {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f3f4f6;
+        }
+        .story-card .story-thumb.text-thumb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            font-size: 42px;
+            font-weight: 700;
+            padding: 20px;
+            text-align: center;
+            height: 200px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .story-card .story-thumb video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .story-card .story-info {
+            padding: 14px 16px;
+        }
+        .story-card .story-info .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .story-card .story-info .user-info .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            background-size: cover;
+            background-position: center;
+        }
+        .story-card .story-info .user-info .name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+        }
+        .story-card .story-info .user-info .time {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-right: auto;
+        }
+        .story-card .story-info .caption {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .story-card .expiry-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 30px;
+            backdrop-filter: blur(4px);
+        }
+        .story-card .story-type-icon {
+            position: absolute;
+            bottom: 80px;
+            right: 12px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+        }
+        .stories-empty {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+        .stories-empty i {
+            font-size: 64px;
+            color: #e5e7eb;
+            margin-bottom: 16px;
+        }
+        .stories-empty h3 {
+            font-size: 20px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .stories-empty p {
+            color: var(--text-light);
+            font-size: 15px;
+        }
+        @media (max-width: 640px) {
+            .stories-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 12px;
+            }
+            .story-card .story-thumb {
+                height: 150px;
+            }
+            .story-card .story-thumb.text-thumb {
+                height: 150px;
+                font-size: 28px;
+            }
+            .stories-header h1 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stories-page">
+        <div class="stories-container">
+            <div class="stories-header">
+                <h1>
+                    <i class="fas fa-circle" style="color:#f5576c;font-size:18px;"></i>
+                    القصص
+                    <span class="badge">{{ stories|length }}</span>
+                </h1>
+                <button class="back-btn" onclick="window.location.href='/dashboard'">
+                    <i class="fas fa-arrow-right"></i> رجوع
+                </button>
+            </div>
+
+            {% if stories %}
+            <div class="stories-grid">
+                {% for story in stories %}
+                <div class="story-card" onclick="window.location.href='/story/{{ story.id }}'">
+                    {% if story.media_type == 'image' %}
+                        <img class="story-thumb" src="{{ url_for('download_story', filename=story.media_path) }}" alt="قصة">
+                    {% elif story.media_type == 'video' %}
+                        <div class="story-thumb">
+                            <video muted><source src="{{ url_for('download_story', filename=story.media_path) }}"></video>
+                            <div class="story-type-icon"><i class="fas fa-play"></i></div>
+                        </div>
+                    {% elif story.media_type == 'text' %}
+                        <div class="story-thumb text-thumb">
+                            {{ story.content_text or story.caption or '📝' }}
+                        </div>
+                    {% else %}
+                        <div class="story-thumb text-thumb">📝</div>
+                    {% endif %}
+                    <div class="story-info">
+                        <div class="user-info">
+                            <div class="avatar" style="background-image:url({{ url_for('download_profile_pic', filename=story.user.profile_pic) if story.user.profile_pic else 'none' }});">
+                                {% if not story.user.profile_pic %}{{ story.user.display_name[0]|upper }}{% endif %}
+                            </div>
+                            <span class="name">{{ story.user.display_name }}</span>
+                            <span class="time">{{ story.created_at.strftime('%H:%M') }}</span>
+                        </div>
+                        {% if story.caption %}
+                        <div class="caption">{{ story.caption }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="expiry-badge">
+                        <i class="far fa-clock"></i> {{ story.expires_at.strftime('%H:%M') }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="stories-empty">
+                <i class="fas fa-camera"></i>
+                <h3>لا توجد قصص</h3>
+                <p>لم ينشر أي من المستخدمين قصصاً بعد. كن أول من يشارك!</p>
+                <button onclick="window.location.href='/dashboard'" style="margin-top:16px;background:var(--primary);color:white;border:none;padding:10px 28px;border-radius:30px;font-size:14px;cursor:pointer;">
+                    <i class="fas fa-arrow-right"></i> العودة للداشبورد
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,795 @@
+import os
+import base64
+import random
+import smtplib
+from email.mime.text import MIMEText
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO, emit, join_room, leave_room
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from datetime import datetime, timezone
+from cryptography.fernet import Fernet
+import pyotp
+import qrcode
+from io import BytesIO
+
+app = Flask(__name__)
+app.secret_key = 'syst-secret-key-change-in-production'
+
+# إعدادات البريد الإلكتروني (قم بتعديلها حسب بريدك)
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USER = 'your_email@gmail.com'      # استبدل ببريدك
+EMAIL_PASS = 'your_app_password'         # استبدل بكلمة مرور التطبيق
+
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {
+    'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp',
+    'mp3', 'wav', 'ogg', 'webm', 'aac', 'flac',
+    'pdf', 'txt', 'zip', 'rar', 'doc', 'docx', 'xls', 'xlsx'
+}
+MAX_FILE_SIZE = 20 * 1024 * 1024
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'syst.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# ---------- تشفير ----------
+ENCRYPTION_KEY = os.environ.get('SYST_ENCRYPTION_KEY')
+if not ENCRYPTION_KEY:
+    key_file = os.path.join(app.instance_path, 'encryption.key')
+    if os.path.exists(key_file):
+        with open(key_file, 'rb') as f:
+            ENCRYPTION_KEY = f.read()
+    else:
+        ENCRYPTION_KEY = Fernet.generate_key()
+        with open(key_file, 'wb') as f:
+            f.write(ENCRYPTION_KEY)
+cipher = Fernet(ENCRYPTION_KEY)
+
+def encrypt_message(text):
+    if not text:
+        return text
+    return cipher.encrypt(text.encode()).decode()
+
+def decrypt_message(encrypted_text):
+    if not encrypted_text:
+        return encrypted_text
+    try:
+        return cipher.decrypt(encrypted_text.encode()).decode()
+    except:
+        return "[رسالة مشفرة غير قابلة للقراءة]"
+
+# ---------- دوال إرسال البريد ----------
+def send_reset_email(email, username, code):
+    try:
+        msg = MIMEText(f"""
+مرحباً {username},
+
+لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في Syst.
+
+كود التحقق الخاص بك هو: {code}
+
+هذا الكود صالح لمدة 10 دقائق.
+
+إذا لم تكن أنت من طلب إعادة التعيين، تجاهل هذه الرسالة.
+
+مع تحيات فريق Syst
+""")
+        msg['Subject'] = 'إعادة تعيين كلمة المرور - Syst'
+        msg['From'] = EMAIL_USER
+        msg['To'] = email
+
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASS)
+            server.sendmail(EMAIL_USER, [email], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"⚠️ فشل إرسال البريد: {e}")
+        return False
+
+# ---------- نماذج قاعدة البيانات ----------
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    display_name = db.Column(db.String(100), nullable=False, default='')
+    email = db.Column(db.String(120), nullable=True)
+    password_hash = db.Column(db.String(200), nullable=False)
+    otp_secret = db.Column(db.String(32), nullable=True)
+    messages = db.relationship('Message', foreign_keys='[Message.user_id]', backref='author', lazy=True)
+    memberships = db.relationship('GroupMembership', backref='user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def enable_2fa(self):
+        self.otp_secret = pyotp.random_base32()
+        return self.otp_secret
+
+    def disable_2fa(self):
+        self.otp_secret = None
+
+    def verify_otp(self, code):
+        if not self.otp_secret:
+            return False
+        totp = pyotp.TOTP(self.otp_secret)
+        return totp.verify(code)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content_encrypted = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
+    private_with = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    file_name = db.Column(db.String(200), nullable=True)
+    file_path = db.Column(db.String(300), nullable=True)
+    file_type = db.Column(db.String(50), nullable=True)
+
+    @property
+    def content(self):
+        return decrypt_message(self.content_encrypted)
+
+    @content.setter
+    def content(self, plaintext):
+        self.content_encrypted = encrypt_message(plaintext)
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    members = db.relationship('GroupMembership', backref='group', lazy=True)
+    messages = db.relationship('Message', backref='group', lazy=True)
+
+class GroupMembership(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_admin = db.Column(db.Boolean, default=False)
+
+class CallLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    call_type = db.Column(db.String(20), nullable=False)
+    start_time = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    end_time = db.Column(db.DateTime, nullable=True)
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String(20), default='initiated')
+
+    @property
+    def duration_str(self):
+        if self.duration_seconds is None:
+            return "--:--"
+        minutes = self.duration_seconds // 60
+        seconds = self.duration_seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
+
+# ---------- إنشاء الجداول والمستخدم الافتراضي ----------
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', display_name='المدير', email='admin@example.com')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ تم إنشاء المستخدم الافتراضي: admin / admin123 (البريد: admin@example.com)")
+
+os.makedirs(app.instance_path, exist_ok=True)
+init_db()
+
+# ---------- دوال مساعدة للملفات ----------
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_file_type(filename):
+    ext = filename.rsplit('.', 1)[1].lower()
+    image_exts = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+    audio_exts = {'mp3', 'wav', 'ogg', 'webm', 'aac', 'flac'}
+    if ext in image_exts:
+        return 'image'
+    elif ext in audio_exts:
+        return 'audio'
+    else:
+        return 'document'
+
+# ---------- المسارات ----------
+@app.route('/')
+def home():
+    if 'username' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            session['pre_login_username'] = username
+            if user.otp_secret:
+                return redirect(url_for('verify_2fa'))
+            else:
+                session['username'] = username
+                flash('تم تسجيل الدخول بنجاح', 'success')
+                return redirect(url_for('dashboard'))
+        else:
+            flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
+    return render_template('login.html')
+
+@app.route('/verify_2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    username = session.get('pre_login_username')
+    if not username:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        code = request.form.get('otp', '').strip()
+        if user.verify_otp(code):
+            session['username'] = username
+            session.pop('pre_login_username', None)
+            flash('تم تسجيل الدخول بنجاح (مع 2FA)', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('رمز التحقق غير صحيح', 'danger')
+    return render_template('verify_2fa.html', username=username)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        display_name = request.form.get('display_name', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        confirm = request.form.get('confirm_password', '').strip()
+        enable_2fa = request.form.get('enable_2fa') == 'on'
+
+        if not username or len(username) < 3:
+            flash('اسم المستخدم يجب أن يكون 3 أحرف على الأقل', 'danger')
+            return render_template('signup.html')
+        if not display_name:
+            flash('الاسم المعروض مطلوب', 'danger')
+            return render_template('signup.html')
+        if not email:
+            flash('البريد الإلكتروني مطلوب', 'danger')
+            return render_template('signup.html')
+        if not password or len(password) < 6:
+            flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'danger')
+            return render_template('signup.html')
+        if password != confirm:
+            flash('كلمة المرور غير متطابقة', 'danger')
+            return render_template('signup.html')
+        if User.query.filter_by(username=username).first():
+            flash('اسم المستخدم موجود بالفعل', 'danger')
+            return render_template('signup.html')
+
+        session['signup_temp'] = {
+            'username': username,
+            'display_name': display_name,
+            'email': email,
+            'password': password
+        }
+
+        if enable_2fa:
+            return redirect(url_for('signup_2fa'))
+        else:
+            new_user = User(username=username, display_name=display_name, email=email)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            session.pop('signup_temp', None)
+            flash('تم التسجيل بنجاح، يمكنك الدخول الآن', 'success')
+            return redirect(url_for('login'))
+    return render_template('signup.html')
+
+@app.route('/signup-2fa', methods=['GET', 'POST'])
+def signup_2fa():
+    temp_data = session.get('signup_temp')
+    if not temp_data:
+        flash('يرجى البدء بعملية التسجيل أولاً', 'danger')
+        return redirect(url_for('signup'))
+    
+    username = temp_data.get('username')
+    display_name = temp_data.get('display_name')
+    email = temp_data.get('email')
+    password = temp_data.get('password')
+    
+    if User.query.filter_by(username=username).first():
+        flash('اسم المستخدم موجود بالفعل', 'danger')
+        session.pop('signup_temp', None)
+        return redirect(url_for('signup'))
+    
+    secret = pyotp.random_base32()
+    session['signup_otp_secret'] = secret
+    
+    if request.method == 'POST':
+        code = request.form.get('otp', '').strip()
+        if not code:
+            flash('يرجى إدخال رمز التحقق', 'danger')
+            return render_template('signup_2fa.html', username=username, display_name=display_name, secret=secret)
+        
+        totp = pyotp.TOTP(secret)
+        if totp.verify(code):
+            new_user = User(username=username, display_name=display_name, email=email, otp_secret=secret)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            session.pop('signup_temp', None)
+            session.pop('signup_otp_secret', None)
+            flash('تم إنشاء الحساب مع تفعيل المصادقة الثنائية بنجاح. يمكنك تسجيل الدخول الآن.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('رمز التحقق غير صحيح. حاول مرة أخرى.', 'danger')
+    
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(name=username, issuer_name="Syst")
+    qr = qrcode.make(provisioning_uri)
+    buffered = BytesIO()
+    qr.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
+    
+    return render_template('signup_2fa.html', username=username, display_name=display_name, 
+                           secret=secret, qr_base64=qr_base64)
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    session.pop('pre_login_username', None)
+    flash('تم تسجيل الخروج', 'info')
+    return redirect(url_for('login'))
+
+# ---------- إعادة تعيين كلمة المرور ----------
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        if not username:
+            flash('يرجى إدخال اسم المستخدم', 'danger')
+            return render_template('forgot_password.html')
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            flash('المستخدم غير موجود', 'danger')
+            return render_template('forgot_password.html')
+        if not user.email:
+            flash('هذا المستخدم ليس لديه بريد إلكتروني مسجل. يرجى التواصل مع الدعم.', 'danger')
+            return render_template('forgot_password.html')
+        
+        code = str(random.randint(100000, 999999))
+        session['reset_code'] = code
+        session['reset_username'] = username
+        session['reset_code_time'] = datetime.now(timezone.utc).timestamp()
+        
+        sent = send_reset_email(user.email, user.display_name, code)
+        if sent:
+            flash(f'تم إرسال كود التحقق إلى بريدك الإلكتروني ({user.email}).', 'success')
+            return redirect(url_for('verify_reset_code'))
+        else:
+            print(f"🔑 كود إعادة التعيين لـ {username}: {code}")
+            flash(f'لم نتمكن من إرسال البريد. الكود الخاص بك هو: {code} (ظهر في وحدة التحكم).', 'warning')
+            return redirect(url_for('verify_reset_code'))
+    return render_template('forgot_password.html')
+
+@app.route('/verify-reset-code', methods=['GET', 'POST'])
+def verify_reset_code():
+    username = session.get('reset_username')
+    if not username:
+        flash('يرجى بدء عملية إعادة التعيين أولاً', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        user_code = request.form.get('code', '').strip()
+        stored_code = session.get('reset_code')
+        code_time = session.get('reset_code_time', 0)
+        
+        if (datetime.now(timezone.utc).timestamp() - code_time) > 600:
+            flash('انتهت صلاحية الكود. يرجى طلب كود جديد.', 'danger')
+            session.pop('reset_code', None)
+            session.pop('reset_username', None)
+            session.pop('reset_code_time', None)
+            return redirect(url_for('forgot_password'))
+        
+        if user_code == stored_code:
+            flash('تم التحقق بنجاح. يمكنك الآن تعيين كلمة مرور جديدة.', 'success')
+            session.pop('reset_code', None)
+            session.pop('reset_code_time', None)
+            return redirect(url_for('reset_password'))
+        else:
+            flash('الكود غير صحيح. حاول مرة أخرى.', 'danger')
+    
+    return render_template('verify_reset_code.html', username=username)
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    username = session.get('reset_username')
+    if not username:
+        flash('يرجى بدء عملية إعادة التعيين أولاً', 'danger')
+        return redirect(url_for('forgot_password'))
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password', '').strip()
+        confirm = request.form.get('confirm_password', '').strip()
+        if not password or len(password) < 6:
+            flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'danger')
+            return render_template('reset_password.html', username=username)
+        if password != confirm:
+            flash('كلمة المرور غير متطابقة', 'danger')
+            return render_template('reset_password.html', username=username)
+        user.set_password(password)
+        db.session.commit()
+        session.pop('reset_username', None)
+        flash('تم إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.', 'success')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', username=username)
+
+# ---------- لوحة التحكم ----------
+@app.route('/dashboard')
+def dashboard():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    private_users = db.session.query(User).join(Message, (Message.private_with == user.id) | (Message.user_id == user.id))\
+        .filter(Message.private_with.isnot(None)).filter(User.id != user.id).distinct().all()
+    groups = Group.query.join(GroupMembership).filter(GroupMembership.user_id == user.id).all()
+    return render_template('dashboard.html', username=session['username'], display_name=user.display_name,
+                           private_users=private_users, groups=groups)
+
+@app.route('/chat/private/<int:user_id>')
+def private_chat(user_id):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    other = User.query.get(user_id)
+    if not other:
+        flash('المستخدم غير موجود', 'danger')
+        return redirect(url_for('dashboard'))
+    messages = Message.query.filter(
+        ((Message.user_id == user.id) & (Message.private_with == other.id)) |
+        ((Message.user_id == other.id) & (Message.private_with == user.id))
+    ).order_by(Message.timestamp.asc()).all()
+    return render_template('private_chat.html', username=session['username'], display_name=user.display_name,
+                           other=other, messages=messages)
+
+@app.route('/chat/group/<int:group_id>')
+def group_chat(group_id):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    group = Group.query.get(group_id)
+    if not group:
+        flash('المجموعة غير موجودة', 'danger')
+        return redirect(url_for('dashboard'))
+    membership = GroupMembership.query.filter_by(user_id=user.id, group_id=group.id).first()
+    if not membership:
+        flash('أنت لست عضواً في هذه المجموعة', 'danger')
+        return redirect(url_for('dashboard'))
+    messages = Message.query.filter(Message.group_id == group_id).order_by(Message.timestamp.asc()).all()
+    return render_template('group_chat.html', username=session['username'], display_name=user.display_name,
+                           messages=messages, group=group)
+
+@app.route('/create_group', methods=['POST'])
+def create_group():
+    if 'username' not in session:
+        return jsonify({'error': 'غير مسجل دخول'}), 401
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('اسم المجموعة مطلوب', 'danger')
+        return redirect(url_for('settings'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    group = Group(name=name, created_by=user.id)
+    db.session.add(group)
+    db.session.commit()
+    membership = GroupMembership(user_id=user.id, group_id=group.id, is_admin=True)
+    db.session.add(membership)
+    db.session.commit()
+    flash(f'تم إنشاء المجموعة "{name}" بنجاح', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/join_group', methods=['POST'])
+def join_group():
+    if 'username' not in session:
+        return jsonify({'error': 'غير مسجل دخول'}), 401
+    group_id = request.form.get('group_id', type=int)
+    if not group_id:
+        flash('معرف المجموعة مطلوب', 'danger')
+        return redirect(url_for('settings'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    group = Group.query.get(group_id)
+    if not group:
+        flash('المجموعة غير موجودة', 'danger')
+        return redirect(url_for('settings'))
+    existing = GroupMembership.query.filter_by(user_id=user.id, group_id=group.id).first()
+    if existing:
+        flash('أنت بالفعل عضو في هذه المجموعة', 'info')
+        return redirect(url_for('settings'))
+    membership = GroupMembership(user_id=user.id, group_id=group.id)
+    db.session.add(membership)
+    db.session.commit()
+    flash(f'انضممت إلى المجموعة "{group.name}"', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    if 'file' not in request.files:
+        flash('لا يوجد ملف', 'danger')
+            # العودة إلى المحادثة المناسبة
+    if private_with:
+        return redirect(url_for('private_chat', user_id=private_with))
+    elif group_id:
+        return redirect(url_for('group_chat', group_id=group_id))
+    else:
+        return redirect(url_for('dashboard'))
+    file = request.files['file']
+    if file.filename == '':
+        flash('لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('dashboard'))
+    if not allowed_file(file.filename):
+        flash('نوع الملف غير مسموح', 'danger')
+        return redirect(url_for('dashboard'))    # تعريف المتغيرات مسبقاً
+    private_with = request.form.get('private_with', type=int)
+    group_id = request.form.get('group_id', type=int)
+
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    unique_filename = f"{timestamp}_{filename}"
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    file.save(file_path)
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        flash('حدث خطأ', 'danger')
+        return redirect(url_for('dashboard'))
+    private_with = request.form.get('private_with', type=int)
+    group_id = request.form.get('group_id', type=int)
+    file_url = url_for('download_file', filename=unique_filename)
+    file_type = get_file_type(filename)
+    if file_type == 'image':
+        msg_content = f"🖼️ صورة: {filename}"
+    elif file_type == 'audio':
+        msg_content = f"🎵 مقطع صوتي: {filename}"
+    else:
+        msg_content = f"📎 ملف: {filename} (حجم: {os.path.getsize(file_path) // 1024} كيلوبايت)"
+    msg = Message(content=msg_content, author=user, file_name=filename, file_path=file_path, file_type=file_type,
+                  private_with=private_with, group_id=group_id)
+    db.session.add(msg)
+    db.session.commit()
+    room = None
+    if private_with:
+        room = f"private_{min(user.id, private_with)}_{max(user.id, private_with)}"
+    elif group_id:
+        room = f"group_{group_id}"
+    socketio.emit('new_message', {
+        'username': user.username,
+        'display_name': user.display_name,
+        'content': msg.content,
+        'timestamp': msg.timestamp.strftime('%H:%M'),
+        'file_name': filename,
+        'file_url': file_url,
+        'file_type': file_type,
+        'private_with': private_with,
+        'group_id': group_id
+    }, namespace='/', room=room)
+    flash('تم رفع الملف وإرساله', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/call_log')
+def call_log():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    calls = CallLog.query.filter(
+        (CallLog.caller_id == user.id) | (CallLog.receiver_id == user.id)
+    ).order_by(CallLog.start_time.desc()).all()
+    return render_template('call_log.html', username=session['username'], display_name=user.display_name, calls=calls)
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        new_display_name = request.form.get('display_name', '').strip()
+        if new_display_name:
+            user.display_name = new_display_name
+            db.session.commit()
+            flash('تم تحديث الاسم المعروض بنجاح', 'success')
+        else:
+            flash('الاسم المعروض لا يمكن أن يكون فارغاً', 'danger')
+        return redirect(url_for('settings'))
+    return render_template('settings.html', username=session['username'], display_name=user.display_name)
+
+@app.route('/search')
+def search():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+    users = User.query.filter(User.id != user.id).all()
+    return render_template('search.html', username=session['username'], display_name=user.display_name, users=users)
+
+# ---------- WebSocket ----------
+@socketio.on('connect')
+def handle_connect():
+    print(f"🟢 مستخدم متصل: {session.get('username', 'غير معروف')}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print(f"🔴 مستخدم غادر: {session.get('username', 'غير معروف')}")
+
+@socketio.on('join_private')
+def handle_join_private(data):
+    user_id = data.get('user_id')
+    username = session.get('username')
+    if not username or not user_id:
+        return
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return
+    room = f"private_{min(user.id, user_id)}_{max(user.id, user_id)}"
+    join_room(room)
+    print(f"👤 {username} انضم إلى الغرفة الخاصة {room}")
+
+@socketio.on('join_group')
+def handle_join_group(data):
+    group_id = data.get('group_id')
+    username = session.get('username')
+    if not username or not group_id:
+        return
+    room = f"group_{group_id}"
+    join_room(room)
+    print(f"👥 {username} انضم إلى الغرفة {room}")
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    content = data.get('message', '').strip()
+    private_with = data.get('private_with')
+    group_id = data.get('group_id')
+    username = session.get('username')
+    if not username or not content:
+        return
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return
+    if private_with:
+        other = User.query.get(private_with)
+        if not other:
+            return
+        room = f"private_{min(user.id, private_with)}_{max(user.id, private_with)}"
+    elif group_id:
+        membership = GroupMembership.query.filter_by(user_id=user.id, group_id=group_id).first()
+        if not membership:
+            return
+        room = f"group_{group_id}"
+    else:
+        return
+    msg = Message(content=content, author=user, private_with=private_with, group_id=group_id)
+    db.session.add(msg)
+    db.session.commit()
+    emit('new_message', {
+        'username': username,
+        'display_name': user.display_name,
+        'content': msg.content,
+        'timestamp': msg.timestamp.strftime('%H:%M'),
+        'private_with': private_with,
+        'group_id': group_id
+    }, broadcast=True, room=room)
+
+# ---------- إشارات المكالمات ----------
+@socketio.on('signal')
+def handle_signal(data):
+    target = data.get('target')
+    signal_data = data.get('signal')
+    video = data.get('video', False)
+    from_user = session.get('username')
+    if not from_user or not target:
+        return
+    emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
+
+@socketio.on('call_initiated')
+def handle_call_initiated(data):
+    target = data.get('target')
+    call_type = data.get('type')
+    from_user = session.get('username')
+    if not from_user or not target:
+        return
+    caller = User.query.filter_by(username=from_user).first()
+    receiver = User.query.filter_by(username=target).first()
+    if not caller or not receiver:
+        return
+    call_log = CallLog(caller_id=caller.id, receiver_id=receiver.id, call_type=call_type, status='initiated')
+    db.session.add(call_log)
+    db.session.commit()
+    session['current_call_id'] = call_log.id
+    emit('call_initiated', {'call_id': call_log.id, 'from': from_user, 'type': call_type}, to=target)
+
+@socketio.on('call_accepted')
+def handle_call_accepted(data):
+    call_id = data.get('call_id')
+    if call_id:
+        call_log = CallLog.query.get(call_id)
+        if call_log:
+            call_log.status = 'accepted'
+            db.session.commit()
+            emit('call_accepted', {'call_id': call_id}, to=call_log.caller.username)
+
+@socketio.on('call_rejected')
+def handle_call_rejected(data):
+    target = data.get('target')
+    from_user = session.get('username')
+    call_id = session.get('current_call_id')
+    if call_id:
+        call_log = CallLog.query.get(call_id)
+        if call_log:
+            call_log.status = 'rejected'
+            db.session.commit()
+    emit('call_rejected', {'from': from_user, 'call_id': call_id}, to=target)
+
+@socketio.on('call_ended')
+def handle_call_ended(data):
+    call_id = data.get('call_id')
+    if call_id:
+        call_log = CallLog.query.get(call_id)
+        if call_log and call_log.status != 'ended':
+            call_log.status = 'ended'
+            call_log.end_time = datetime.now(timezone.utc)
+            if call_log.start_time:
+                delta = call_log.end_time - call_log.start_time
+                call_log.duration_seconds = int(delta.total_seconds())
+            db.session.commit()
+            session.pop('current_call_id', None)
+
+@socketio.on('call_missed')
+def handle_call_missed(data):
+    target = data.get('target')
+    from_user = session.get('username')
+    call_id = session.get('current_call_id')
+    if call_id:
+        call_log = CallLog.query.get(call_id)
+        if call_log and call_log.status == 'initiated':
+            call_log.status = 'missed'
+            db.session.commit()
+        session.pop('current_call_id', None)
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=7070, debug=True, allow_unsafe_werkzeug=True)

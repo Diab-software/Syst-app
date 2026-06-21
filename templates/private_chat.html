@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دردشة خاصة مع {{ other.display_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <style>
+        .chat-toolbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .chat-toolbar .btn-icon { width:40px; height:40px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#f8f9fa; border:1px solid #e9ecef; color:#495057; transition:all 0.2s; font-size:18px; }
+        .chat-toolbar .btn-icon:hover { background:#e9ecef; transform:scale(1.05); }
+        .chat-toolbar .form-control { flex:1; min-width:120px; border-radius:30px; padding:10px 18px; border:1px solid #e0e0e0; }
+        .chat-toolbar .send-btn { border-radius:30px; padding:10px 24px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); border:none; color:white; font-weight:500; transition:all 0.3s; }
+        .chat-toolbar .send-btn:hover { transform:scale(1.02); box-shadow:0 6px 20px rgba(102,126,234,0.35); }
+        .emoji-picker-container { position:absolute; bottom:70px; left:0; background:white; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.12); padding:12px; display:none; z-index:1000; min-width:240px; }
+        .emoji-picker-container.show { display:block; }
+        .emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+        .emoji-grid .emoji-btn { font-size:28px; padding:6px 0; border:none; background:transparent; border-radius:10px; cursor:pointer; transition:background 0.15s; }
+        .emoji-grid .emoji-btn:hover { background:#f0f0f0; }
+        #typing-indicator { display:none; align-items:center; gap:8px; padding:8px 16px; background:rgba(255,255,255,0.9); border-radius:30px; margin:4px 0 8px 0; font-size:14px; color:#6c757d; backdrop-filter:blur(4px); box-shadow:0 2px 8px rgba(0,0,0,0.04); max-width:fit-content; }
+        .typing-dots { display:flex; gap:4px; align-items:center; }
+        .typing-dots span { width:8px; height:8px; background:#667eea; border-radius:50%; display:inline-block; animation:typingBounce 1.4s infinite ease-in-out both; }
+        .typing-dots span:nth-child(1) { animation-delay:-0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay:-0.16s; }
+        .typing-dots span:nth-child(3) { animation-delay:0s; }
+        @keyframes typingBounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
+        .typing-text { font-weight:500; }
+    </style>
+</head>
+<body>
+    <div class="container chat-container py-4">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="chat-header d-flex align-items-center">
+                <i class="bi bi-person-circle fs-2 me-2"></i>
+                <div>
+                    <h5 class="mb-0">{{ other.display_name }}</h5>
+                    <small class="opacity-75">@{{ other.username }}</small>
+                </div>
+                <div class="ms-auto d-flex gap-1">
+                    <button id="call-btn" class="btn btn-light btn-sm rounded-circle" title="اتصال صوتي"><i class="bi bi-telephone"></i></button>
+                    <button id="video-call-btn" class="btn btn-light btn-sm rounded-circle" title="اتصال فيديو"><i class="bi bi-camera-video"></i></button>
+                    <button id="delete-chat-btn" class="btn btn-light btn-sm rounded-circle text-danger" title="حذف المحادثة"><i class="bi bi-trash3"></i></button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-sm rounded-circle"><i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                {% for msg in messages %}
+                    {% set is_own = (msg.user_id == user.id) %}
+                    <div class="d-flex mb-3 {{ 'justify-content-end' if is_own else 'justify-content-start' }}">
+                        <div class="d-flex {{ 'flex-row-reverse' if is_own else '' }}" style="align-items:flex-end;">
+                            <div class="avatar me-2 ms-2"><i class="bi {{ 'bi-person-circle' if is_own else 'bi-person' }}"></i></div>
+                            <div>
+                                <div class="message-bubble {{ 'sent' if is_own else 'received' }}">
+                                    {{ msg.content }}
+                                    {% if msg.file_name %}<br><small>📎 <a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">{{ msg.file_name }}</a></small>{% endif %}
+                                    {% if msg.pinned %}<span class="pinned-badge"><i class="bi bi-pin-fill"></i> مثبت</span>{% endif %}
+                                </div>
+                                <div class="time-stamp text-muted text-end">{{ msg.timestamp.strftime('%H:%M') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                <div id="typing-indicator">
+                    <span class="typing-dots"><span></span><span></span><span></span></span>
+                    <span class="typing-text">يكتب...</span>
+                </div>
+            </div>
+            <div class="chat-footer">
+                <div class="chat-toolbar position-relative">
+                    <button id="file-upload-btn" class="btn-icon" title="رفع ملفات"><i class="bi bi-paperclip"></i></button>
+                    <input type="file" id="file-input" multiple accept="*/*" style="display:none;">
+                    <button id="record-btn" class="btn-icon" title="تسجيل صوتي"><i class="bi bi-mic"></i></button>
+                    <button id="emoji-toggle" class="btn-icon" title="إيموجي"><i class="bi bi-emoji-smile"></i></button>
+                    <div id="emoji-picker" class="emoji-picker-container">
+                        <div class="emoji-grid">
+                            <button class="emoji-btn" data-emoji="😊">😊</button><button class="emoji-btn" data-emoji="😂">😂</button>
+                            <button class="emoji-btn" data-emoji="❤️">❤️</button><button class="emoji-btn" data-emoji="👍">👍</button>
+                            <button class="emoji-btn" data-emoji="🔥">🔥</button><button class="emoji-btn" data-emoji="🎉">🎉</button>
+                            <button class="emoji-btn" data-emoji="😍">😍</button><button class="emoji-btn" data-emoji="🤔">🤔</button>
+                            <button class="emoji-btn" data-emoji="😎">😎</button><button class="emoji-btn" data-emoji="🙏">🙏</button>
+                            <button class="emoji-btn" data-emoji="💪">💪</button><button class="emoji-btn" data-emoji="👋">👋</button>
+                        </div>
+                    </div>
+                    <input type="text" id="message-input" class="form-control" placeholder="اكتب رسالتك..." autocomplete="off">
+                    <button id="send-btn" class="send-btn"><i class="bi bi-send-fill"></i> إرسال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script>
+        // تعريف المتغيرات العامة
+        window.currentUsername = "{{ session['username'] }}";
+        window.privateWithId = {{ other.id }};
+        window.groupId = null;
+        window.otherUsername = "{{ other.username }}";
+        window.socket = io();
+
+        window.socket.on('connect', function() {
+            console.log('✅ Socket متصل');
+            window.socket.emit('join_private', { user_id: window.privateWithId });
+        });
+
+        window.socket.on('new_message', function(data) {
+            if (data.private_with == window.privateWithId || data.user_id == {{ user.id }}) {
+                if (typeof window.appendChatMessage === 'function') {
+                    window.appendChatMessage(data);
+                } else {
+                    location.reload();
+                }
+            }
+        });
+
+        window.socket.on('typing', function(data) {
+            if (data.from && data.from !== window.currentUsername) {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('.typing-text').textContent = data.display_name + ' يكتب...';
+                    clearTimeout(window.typingTimeout);
+                    window.typingTimeout = setTimeout(function() {
+                        indicator.style.display = 'none';
+                    }, 2000);
+                }
+            }
+        });
+
+        window.socket.on('disconnect', function() {
+            console.warn('⚠️ Socket انقطع');
+        });
+
+        // تحميل chat.js بعد تعريف socket
+        const script = document.createElement('script');
+        script.src = "{{ url_for('static', filename='js/chat.js') }}";
+        script.onload = function() {
+            console.log('✅ chat.js تم تحميله');
+        };
+        document.body.appendChild(script);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
