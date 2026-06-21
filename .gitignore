@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.bak
+*.backup
+*.bak2
+*.backup_final
+uploads/
+instance/
+*.zip
+ngrok
+Ngrok-in-Termux/
+.vscode/
+*.log
+.env
