@@ -7,5 +7,5 @@ Werkzeug==2.3.7
 cryptography==41.0.7
 pyotp==2.9.0
 qrcode==7.4.2
-Pillow==10.1.0
+Pillow==10.3.0
 gunicorn==21.2.0
