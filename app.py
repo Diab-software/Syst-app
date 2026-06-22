@@ -42,7 +42,13 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode=.eventlet.)
+
+# ========== SocketIO مع eventlet ==========
+try:
+    import eventlet
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+except:
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ========== تشفير ==========
 key_file = os.path.join(app.instance_path, 'encryption.key')
