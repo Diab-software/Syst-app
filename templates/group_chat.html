@@ -1,49 +1,126 @@
-<!DOCTYPE html>
-<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>محادثة مجموعة - Syst</title><link rel="stylesheet" href="/static/style.css"><script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script></head>
-<body>
-<nav class="navbar"><div class="logo">💬 Syst <span>مجموعة</span></div><div style="display:flex;gap:8px;align-items:center;"><span style="font-weight:500;">{{ group.name }}</span>{% if is_admin %}<button onclick="window.location.href='/group_settings/{{ group.id }}'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⚙️</button>{% endif %}<button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️</button></div></nav>
-<div class="container">
-    <div class="messages" id="messages">
-        {% for msg in messages %}
-        <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}">
-            <div class="msg-header"><span class="user">{{ msg.user.display_name }}</span><span class="time">{{ msg.timestamp.strftime('%H:%M') }}</span></div>
-            <p>{{ msg.content }}</p>
-            {% if msg.file_path %}
-                {% if msg.file_type == 'image' %}<img src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" onclick="window.open(this.src)">
-                {% elif msg.file_type == 'video' %}<video controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></video>
-                {% elif msg.file_type == 'audio' %}<audio controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></audio>
-                {% else %}<div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل {{ msg.file_name }}</a></div>{% endif %}
+{% extends "base.html" %}
+{% block title %}محادثة مجموعة - Syst{% endblock %}
+{% block nav_title %}مجموعة{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<style>
+    .input-area { position: relative; flex-wrap: wrap; }
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .icon-btn { background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
+    .icon-btn:hover { background: rgba(0,0,0,0.1); }
+    .typing-indicator, .recording-indicator {
+        font-size: 13px; color: var(--text-light); margin: 4px 8px; display: none; animation: pulse 1.2s ease-in-out infinite;
+    }
+    .typing-indicator.active, .recording-indicator.active { display: block; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages" id="messages">
+    {% for msg in messages %}
+    <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}" id="msg-{{ msg.id }}">
+        <div class="msg-header">
+            <span class="user">{{ msg.user.display_name }}</span>
+            <span class="time">{{ msg.timestamp.strftime('%H:%M') }}</span>
+        </div>
+        <p>{{ msg.content }}</p>
+        {% if msg.file_path %}
+            {% if msg.file_type == 'image' %}
+                <img src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" onclick="window.open(this.src)">
+            {% elif msg.file_type == 'video' %}
+                <video controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></video>
+            {% elif msg.file_type == 'audio' %}
+                <audio controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></audio>
+            {% else %}
+                <div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل {{ msg.file_name }}</a></div>
             {% endif %}
-            <div class="actions"><button onclick="deleteMsg({{ msg.id }})">🗑️</button><button onclick="pinMsg({{ msg.id }})">📌</button></div>
+        {% endif %}
+        <div class="actions">
+            <button onclick="deleteMsg({{ msg.id }})">🗑️</button>
+            <button onclick="pinMsg({{ msg.id }})">📌</button>
         </div>
-        {% endfor %}
     </div>
-    <div class="input-area">
-        <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
-        <div class="btn-group">
-            <button onclick="sendMsg()">إرسال</button>
-            <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-            <button class="icon-btn" onclick="startRecording()">🎤</button>
-        </div>
-        <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this, {{ group.id }}, null)">
-    </div>
+    {% endfor %}
 </div>
+
+<!-- مؤشرات -->
+<div class="typing-indicator" id="typingIndicator">✍️ شخص ما يكتب...</div>
+<div class="recording-indicator" id="recordingIndicator">🎙️ شخص ما يسجل...</div>
+
+<!-- منطقة الإدخال -->
+<div class="input-area" style="position:relative;">
+    <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
+    <div class="btn-group">
+        <button onclick="sendMsg()">إرسال</button>
+        <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+        <button class="icon-btn" onclick="startRecording()">🎤</button>
+    </div>
+    <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, {{ group.id }}, null)">
+</div>
+
 <script>
 const socket = io();
 const group = {{ group.id }};
 const user = {{ user.id }};
 socket.emit('join_group', { group_id: group });
+
+let typingTimer = null;
+let isTyping = false;
 let mediaRecorder = null;
 let audioChunks = [];
+
+// ===== WebSocket events =====
 socket.on('new_message', function(data) {
     if (data.group_id != group) return;
+    appendMessage(data);
+});
+
+socket.on('typing', function(data) {
+    if (data.group_id == group) {
+        const indicator = document.getElementById('typingIndicator');
+        indicator.textContent = `✍️ ${data.display_name} يكتب...`;
+        indicator.classList.add('active');
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => indicator.classList.remove('active'), 3000);
+    }
+});
+
+socket.on('recording', function(data) {
+    if (data.group_id == group) {
+        const indicator = document.getElementById('recordingIndicator');
+        if (data.status === 'started') {
+            indicator.textContent = '🎙️ ' + data.display_name + ' يسجل...';
+            indicator.classList.add('active');
+        } else {
+            indicator.classList.remove('active');
+        }
+    }
+});
+
+// ===== دوال الرسائل =====
+function appendMessage(data) {
     const div = document.createElement('div');
     div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
-    div.innerHTML = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div><p>${data.content}</p>`;
-    if (data.file_url) div.innerHTML += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل</a></div>`;
+    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
+    if (data.file_url) {
+        if (data.file_type === 'image') {
+            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
+        } else if (data.file_type === 'video') {
+            content += `<video controls><source src="${data.file_url}"></video>`;
+        } else if (data.file_type === 'audio') {
+            content += `<audio controls><source src="${data.file_url}"></audio>`;
+        } else {
+            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
+        }
+    } else {
+        content += `<p>${data.content}</p>`;
+    }
+    div.innerHTML = content;
     document.getElementById('messages').appendChild(div);
     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-});
+}
+
 function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
@@ -51,36 +128,70 @@ function sendMsg() {
     socket.emit('send_message', { message: text, group_id: group });
     input.value = '';
 }
-function deleteMsg(id) { fetch(`/delete_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
-function pinMsg(id) { fetch(`/pin_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
-function uploadFile(input, group_id, private_with) {
+
+function deleteMsg(id) {
+    fetch(`/delete_message/${id}`, {method:'POST'}).then(() => location.reload());
+}
+function pinMsg(id) {
+    fetch(`/pin_message/${id}`, {method:'POST'}).then(() => location.reload());
+}
+
+// ===== مؤشر الكتابة =====
+function handleTyping() {
+    if (!isTyping) {
+        isTyping = true;
+        socket.emit('typing', { group_id: group });
+    }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 2000);
+}
+
+// ===== رفع الملفات =====
+function handleFileSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
+    uploadFileDirect(file, group_id, private_with);
+    input.value = '';
+}
+function uploadFileDirect(file, group_id, private_with) {
     const form = new FormData();
     form.append('file', file);
     if (group_id) form.append('group_id', group_id);
     if (private_with) form.append('private_with', private_with);
-    fetch('/upload_file', { method: 'POST', body: form }).then(r=>r.json()).then(d=>{if(!d.success)alert('فشل رفع الملف')});
-    input.value = '';
+    fetch('/upload_file', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(d => { if (!d.success) alert('فشل رفع الملف: '+d.error); })
+        .catch(() => alert('خطأ في الخادم'));
 }
+
+// ===== التسجيل الصوتي =====
 function startRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); return; }
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
-            const form = new FormData();
-            form.append('file', file);
-            form.append('group_id', group);
-            fetch('/upload_file', { method: 'POST', body: form });
-            stream.getTracks().forEach(t => t.stop());
-        };
-        mediaRecorder.start();
-        alert('🎙️ جارٍ التسجيل... اضغط مرة أخرى للإيقاف.');
-    });
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        document.getElementById('recordingIndicator').classList.remove('active');
+        socket.emit('recording', { group_id: group, status: 'stopped' });
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
+                uploadFileDirect(file, group, null);
+                stream.getTracks().forEach(t => t.stop());
+                mediaRecorder = null;
+                document.getElementById('recordingIndicator').classList.remove('active');
+                socket.emit('recording', { group_id: group, status: 'stopped' });
+            };
+            mediaRecorder.start();
+            document.getElementById('recordingIndicator').textContent = '🎙️ جارٍ التسجيل... اضغط زر 🎤 للإيقاف';
+            document.getElementById('recordingIndicator').classList.add('active');
+            socket.emit('recording', { group_id: group, status: 'started' });
+        })
+        .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
 </script>
-</body></html>
+{% endblock %}

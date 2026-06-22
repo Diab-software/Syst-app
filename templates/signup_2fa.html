@@ -1,1 +1,24 @@
-{% extends 'dashboard.html' %}
+{% extends "base.html" %}
+{% block title %}تفعيل 2FA - Syst{% endblock %}
+{% block nav_title %}تفعيل 2FA{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <h1>🔐 تفعيل 2FA</h1>
+    <p class="sub">امسح رمز QR باستخدام Google Authenticator</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for c,m in messages %}
+                <div class="flash {{ c }}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div><img src="data:image/png;base64,{{ qr_base64 }}" style="max-width:200px;border-radius:12px;border:2px solid #e8ecf1;"></div>
+    <p style="font-size:13px;color:#888;">أو أدخل السر يدوياً:</p>
+    <div style="background:#f3f4f6;padding:8px 18px;border-radius:30px;font-family:monospace;font-size:16px;letter-spacing:2px;display:inline-block;">{{ secret }}</div>
+    <form method="post">
+        <input type="text" name="otp" placeholder="الرمز (6 أرقام)" required pattern="[0-9]{6}">
+        <button type="submit">🔓 تفعيل وإنشاء الحساب</button>
+    </form>
+    <div class="links"><a href="/signup">← تخطي تفعيل 2FA</a></div>
+</div>
+{% endblock %}

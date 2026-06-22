@@ -1,1 +1,20 @@
-{% extends 'dashboard.html' %}
+{% extends "base.html" %}
+{% block title %}تحقق 2FA - Syst{% endblock %}
+{% block nav_title %}تحقق 2FA{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <h1>🔐 تحقق</h1>
+    <p class="sub">أدخل الرمز من تطبيق المصادقة</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for c,m in messages %}
+                <div class="flash {{ c }}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="post">
+        <input type="text" name="otp" placeholder="6 أرقام" required pattern="[0-9]{6}">
+        <button type="submit">تحقق</button>
+    </form>
+</div>
+{% endblock %}

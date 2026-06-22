@@ -1,7 +1,28 @@
 {% extends "base.html" %}
-{% block title %}profile - Syst{% endblock %}
-{% block nav_title %}profile{% endblock %}
+{% block title %}الملف الشخصي - Syst{% endblock %}
+{% block nav_title %}الملف الشخصي{% endblock %}
 {% block content %}
-{% extends 'dashboard.html' %}
-
+<div class="profile-card">
+    {% if user.profile_pic %}
+    <div class="avatar" style="background-image:url({{ url_for('download_file', filename='profiles/'+user.profile_pic) }});background-size:cover;"></div>
+    {% else %}
+    <div class="avatar" style="background:var(--primary);">{{ user.display_name[0]|upper }}</div>
+    {% endif %}
+    <div class="name">{{ user.display_name }}</div>
+    <div class="username">@{{ user.username }}</div>
+    <div class="status">{{ user.status or 'مرحباً!' }}</div>
+    <div style="margin:20px 0;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <form action="/upload_profile_pic" method="post" enctype="multipart/form-data" style="display:inline;">
+            <input type="file" name="profile_pic" accept="image/*" onchange="this.form.submit()" style="display:inline-block;font-size:14px;">
+        </form>
+    </div>
+    <form method="post" action="/update_profile">
+        <div style="display:flex;flex-direction:column;gap:14px;max-width:400px;margin:0 auto;">
+            <div><input type="text" name="display_name" value="{{ user.display_name }}" placeholder="الاسم المعروض" style="width:100%;padding:10px;border-radius:30px;border:2px solid #e5e7eb;"></div>
+            <div><input type="text" name="status" value="{{ user.status or '' }}" placeholder="الحالة" style="width:100%;padding:10px;border-radius:30px;border:2px solid #e5e7eb;"></div>
+            <div><input type="email" name="email" value="{{ user.email or '' }}" placeholder="البريد الإلكتروني" style="width:100%;padding:10px;border-radius:30px;border:2px solid #e5e7eb;"></div>
+            <button type="submit" style="background:var(--primary);color:white;border:none;padding:12px;border-radius:30px;font-weight:600;">تحديث</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

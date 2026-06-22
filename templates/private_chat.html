@@ -1,90 +1,488 @@
-<!DOCTYPE html>
-<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>محادثة خاصة - Syst</title><link rel="stylesheet" href="/static/style.css"><script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script></head>
-<body>
-<nav class="navbar"><div class="logo">💬 Syst <span>خاص</span></div><div style="display:flex;gap:8px;align-items:center;"><span style="font-weight:500;">{{ other.display_name }}</span><button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️</button></div></nav>
-<div class="container">
-    <div class="messages" id="messages">
-        {% for msg in messages %}
-        <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}">
-            <div class="msg-header"><span class="user">{{ msg.user.display_name }}</span><span class="time">{{ msg.timestamp.strftime('%H:%M') }}</span></div>
-            <p>{{ msg.content }}</p>
-            {% if msg.file_path %}
-                {% if msg.file_type == 'image' %}<img src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" onclick="window.open(this.src)">
-                {% elif msg.file_type == 'video' %}<video controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></video>
-                {% elif msg.file_type == 'audio' %}<audio controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></audio>
-                {% else %}<div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل {{ msg.file_name }}</a></div>{% endif %}
+{% extends "base.html" %}
+{% block title %}محادثة خاصة - Syst{% endblock %}
+{% block nav_title %}خاص{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<style>
+    .input-area { position: relative; flex-wrap: wrap; }
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .icon-btn { background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
+    .icon-btn:hover { background: rgba(0,0,0,0.1); }
+    .call-btn { background: #10B981; color: white; }
+    .call-btn.video { background: #3B82F6; }
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        bottom: 70px;
+        left: 10px;
+        background: white;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        max-width: 280px;
+        z-index: 50;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #E5E7EB;
+    }
+    .emoji-picker.active { display: grid; }
+    .emoji-picker button { border: none; background: none; font-size: 22px; cursor: pointer; padding: 4px; border-radius: 6px; }
+    .emoji-picker button:hover { background: #f3f4f6; }
+    .image-preview-container {
+        display: none;
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        padding: 8px;
+        margin-bottom: 8px;
+        border: 2px solid var(--primary);
+        max-width: 200px;
+    }
+    .image-preview-container.active { display: block; }
+    .image-preview-container img { width: 100%; border-radius: 8px; max-height: 150px; object-fit: cover; }
+    .image-preview-container .remove-preview {
+        position: absolute; top: -8px; right: -8px;
+        background: #EF4444; color: white; border: none;
+        border-radius: 50%; width: 24px; height: 24px;
+        cursor: pointer; font-size: 14px;
+    }
+    .typing-indicator, .recording-indicator {
+        font-size: 13px; color: var(--text-light); margin: 4px 8px; display: none; animation: pulse 1.2s ease-in-out infinite;
+    }
+    .typing-indicator.active, .recording-indicator.active { display: block; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages" id="messages">
+    {% for msg in messages %}
+    <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}" id="msg-{{ msg.id }}">
+        <div class="msg-header">
+            <span class="user">{{ msg.user.display_name }}</span>
+            <span class="time">{{ msg.timestamp.strftime('%H:%M') }}</span>
+        </div>
+        <p>{{ msg.content }}</p>
+        {% if msg.file_path %}
+            {% if msg.file_type == 'image' %}
+                <img src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" onclick="window.open(this.src)">
+            {% elif msg.file_type == 'video' %}
+                <video controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></video>
+            {% elif msg.file_type == 'audio' %}
+                <audio controls><source src="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}"></audio>
+            {% else %}
+                <div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل {{ msg.file_name }}</a></div>
             {% endif %}
-            <div class="actions"><button onclick="deleteMsg({{ msg.id }})">🗑️</button><button onclick="pinMsg({{ msg.id }})">📌</button></div>
+        {% endif %}
+        <div class="actions">
+            <button onclick="deleteMsg({{ msg.id }})">🗑️</button>
+            <button onclick="pinMsg({{ msg.id }})">📌</button>
         </div>
-        {% endfor %}
     </div>
-    <div class="input-area">
-        <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
-        <div class="btn-group">
-            <button onclick="sendMsg()">إرسال</button>
-            <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-            <button class="icon-btn" onclick="startRecording()">🎤</button>
-            <button class="icon-btn call-btn" onclick="startCall(false)">📞</button>
-            <button class="icon-btn call-btn video" onclick="startCall(true)">📹</button>
-        </div>
-        <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this, null, {{ other.id }})">
+    {% endfor %}
+</div>
+
+<!-- مؤشرات -->
+<div class="typing-indicator" id="typingIndicator">✍️ {{ other.display_name }} يكتب...</div>
+<div class="recording-indicator" id="recordingIndicator">🎙️ {{ other.display_name }} يسجل...</div>
+
+<!-- معاينة الصورة -->
+<div class="image-preview-container" id="imagePreview">
+    <button class="remove-preview" onclick="removeImagePreview()">✕</button>
+    <img id="previewImage" src="">
+    <button onclick="sendImage()" style="background:var(--primary);color:white;border:none;padding:4px 12px;border-radius:30px;margin-top:4px;cursor:pointer;">إرسال الصورة</button>
+</div>
+
+<!-- منطقة الإدخال -->
+<div class="input-area" style="position:relative;">
+    <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
+    <div class="btn-group">
+        <button onclick="sendMsg()">إرسال</button>
+        <button class="icon-btn" onclick="toggleEmojiPicker()">😊</button>
+        <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+        <button class="icon-btn" onclick="document.getElementById('imageInput').click()">🖼️</button>
+        <button class="icon-btn" onclick="startRecording()">🎤</button>
+        <button class="icon-btn call-btn" onclick="startCall(false)">📞</button>
+        <button class="icon-btn call-btn video" onclick="startCall(true)">📹</button>
+    </div>
+    <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
+    <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
+
+    <!-- منقي الإيموجي -->
+    <div class="emoji-picker" id="emojiPicker">
+        <button onclick="insertEmoji('😊')">😊</button>
+        <button onclick="insertEmoji('😂')">😂</button>
+        <button onclick="insertEmoji('🤣')">🤣</button>
+        <button onclick="insertEmoji('😍')">😍</button>
+        <button onclick="insertEmoji('🥰')">🥰</button>
+        <button onclick="insertEmoji('😘')">😘</button>
+        <button onclick="insertEmoji('❤️')">❤️</button>
+        <button onclick="insertEmoji('🔥')">🔥</button>
+        <button onclick="insertEmoji('👍')">👍</button>
+        <button onclick="insertEmoji('🙏')">🙏</button>
+        <button onclick="insertEmoji('👋')">👋</button>
+        <button onclick="insertEmoji('🤗')">🤗</button>
+        <button onclick="insertEmoji('😎')">😎</button>
+        <button onclick="insertEmoji('🤩')">🤩</button>
+        <button onclick="insertEmoji('😱')">😱</button>
+        <button onclick="insertEmoji('🤔')">🤔</button>
+        <button onclick="insertEmoji('😭')">😭</button>
+        <button onclick="insertEmoji('😡')">😡</button>
+        <button onclick="insertEmoji('💔')">💔</button>
+        <button onclick="insertEmoji('💕')">💕</button>
+        <button onclick="insertEmoji('✨')">✨</button>
+        <button onclick="insertEmoji('⭐')">⭐</button>
+        <button onclick="insertEmoji('🌹')">🌹</button>
+        <button onclick="insertEmoji('🌸')">🌸</button>
+        <button onclick="insertEmoji('🎉')">🎉</button>
+        <button onclick="insertEmoji('🎊')">🎊</button>
+        <button onclick="insertEmoji('🎂')">🎂</button>
+        <button onclick="insertEmoji('🍕')">🍕</button>
+        <button onclick="insertEmoji('🍔')">🍔</button>
+        <button onclick="insertEmoji('🍟')">🍟</button>
+        <button onclick="insertEmoji('☕')">☕</button>
+        <button onclick="insertEmoji('🍺')">🍺</button>
+        <button onclick="insertEmoji('🏆')">🏆</button>
+        <button onclick="insertEmoji('🎯')">🎯</button>
+        <button onclick="insertEmoji('💪')">💪</button>
+        <button onclick="insertEmoji('🤝')">🤝</button>
+        <button onclick="insertEmoji('🙌')">🙌</button>
+        <button onclick="insertEmoji('👏')">👏</button>
+        <button onclick="insertEmoji('🎵')">🎵</button>
+        <button onclick="insertEmoji('🎶')">🎶</button>
+        <button onclick="insertEmoji('📷')">📷</button>
+        <button onclick="insertEmoji('📸')">📸</button>
+        <button onclick="insertEmoji('💻')">💻</button>
+        <button onclick="insertEmoji('📱')">📱</button>
+        <button onclick="insertEmoji('💡')">💡</button>
+        <button onclick="insertEmoji('🔑')">🔑</button>
+        <button onclick="insertEmoji('💎')">💎</button>
+        <button onclick="insertEmoji('🌈')">🌈</button>
+        <button onclick="insertEmoji('🌟')">🌟</button>
     </div>
 </div>
+
+<!-- نافذة المكالمة -->
+<div class="call-window" id="callWindow">
+    <div class="call-title" id="callTitle">📞 مكالمة</div>
+    <div class="call-avatar" id="callAvatar">👤</div>
+    <div class="call-status" id="callStatus">جارٍ الاتصال...</div>
+    <div class="video-grid" id="videoGrid">
+        <video id="localVideo" autoplay muted style="width:100%;border-radius:12px;background:#0a0a1a;"></video>
+        <video id="remoteVideo" autoplay style="width:100%;border-radius:12px;background:#0a0a1a;"></video>
+    </div>
+    <div class="call-controls">
+        <button class="end" onclick="endCall()">إنهاء</button>
+        <button class="mute" onclick="toggleMute()">🔇 كتم</button>
+        <button class="video-toggle" onclick="toggleVideo()">📹 فيديو</button>
+        <button class="mute" onclick="toggleSpeaker()">🔊 سماعة</button>
+    </div>
+</div>
+
 <script>
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
 const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
 socket.emit('join_private', { user_id: other });
+
+let typingTimer = null;
+let isTyping = false;
 let mediaRecorder = null;
 let audioChunks = [];
+let selectedImage = null;
+
+// ===== WebSocket events =====
 socket.on('new_message', function(data) {
     if (data.private_with != other && data.user_id != other) return;
+    appendMessage(data);
+});
+
+socket.on('typing', function(data) {
+    if (data.private_with == user) {
+        const indicator = document.getElementById('typingIndicator');
+        indicator.textContent = `✍️ ${data.display_name} يكتب...`;
+        indicator.classList.add('active');
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => indicator.classList.remove('active'), 3000);
+    }
+});
+
+socket.on('recording', function(data) {
+    if (data.private_with == user) {
+        const indicator = document.getElementById('recordingIndicator');
+        if (data.status === 'started') {
+            indicator.textContent = '🎙️ ' + data.display_name + ' يسجل...';
+            indicator.classList.add('active');
+        } else {
+            indicator.classList.remove('active');
+        }
+    }
+});
+
+// ===== دوال الرسائل =====
+function appendMessage(data) {
     const div = document.createElement('div');
     div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
-    div.innerHTML = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div><p>${data.content}</p>`;
-    if (data.file_url) div.innerHTML += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل</a></div>`;
+    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
+    if (data.file_url) {
+        if (data.file_type === 'image') {
+            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
+        } else if (data.file_type === 'video') {
+            content += `<video controls><source src="${data.file_url}"></video>`;
+        } else if (data.file_type === 'audio') {
+            content += `<audio controls><source src="${data.file_url}"></audio>`;
+        } else {
+            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
+        }
+    } else {
+        content += `<p>${data.content}</p>`;
+    }
+    div.innerHTML = content;
     document.getElementById('messages').appendChild(div);
     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-});
+}
+
 function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
     if (!text) return;
     socket.emit('send_message', { message: text, private_with: other });
     input.value = '';
+    document.getElementById('emojiPicker').classList.remove('active');
 }
-function deleteMsg(id) { fetch(`/delete_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
-function pinMsg(id) { fetch(`/pin_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
-function uploadFile(input, group_id, private_with) {
+
+function deleteMsg(id) {
+    fetch(`/delete_message/${id}`, {method:'POST'}).then(() => location.reload());
+}
+function pinMsg(id) {
+    fetch(`/pin_message/${id}`, {method:'POST'}).then(() => location.reload());
+}
+
+// ===== مؤشر الكتابة =====
+function handleTyping() {
+    if (!isTyping) {
+        isTyping = true;
+        socket.emit('typing', { private_with: other });
+    }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 2000);
+}
+
+// ===== الإيموجي =====
+function toggleEmojiPicker() {
+    document.getElementById('emojiPicker').classList.toggle('active');
+}
+function insertEmoji(emoji) {
+    const input = document.getElementById('msgInput');
+    input.value += emoji;
+    input.focus();
+    document.getElementById('emojiPicker').classList.remove('active');
+}
+
+// ===== معاينة الصورة =====
+function handleImageSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        alert('الرجاء اختيار ملف صورة فقط');
+        input.value = '';
+        return;
+    }
+    selectedImage = file;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('previewImage').src = e.target.result;
+        document.getElementById('imagePreview').classList.add('active');
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+function removeImagePreview() {
+    document.getElementById('imagePreview').classList.remove('active');
+    selectedImage = null;
+}
+function sendImage() {
+    if (!selectedImage) return;
+    uploadFileDirect(selectedImage, null, other);
+    removeImagePreview();
+}
+
+// ===== رفع الملفات =====
+function handleFileSelect(input, group_id, private_with) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.type.startsWith('image/')) {
+        // معالجة الصور عبر المعاينة
+        selectedImage = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImage').src = e.target.result;
+            document.getElementById('imagePreview').classList.add('active');
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+        return;
+    }
+    uploadFileDirect(file, group_id, private_with);
+    input.value = '';
+}
+function uploadFileDirect(file, group_id, private_with) {
     const form = new FormData();
     form.append('file', file);
     if (group_id) form.append('group_id', group_id);
     if (private_with) form.append('private_with', private_with);
-    fetch('/upload_file', { method: 'POST', body: form }).then(r=>r.json()).then(d=>{if(!d.success)alert('فشل رفع الملف')});
-    input.value = '';
+    fetch('/upload_file', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(d => { if (!d.success) alert('فشل رفع الملف: '+d.error); })
+        .catch(() => alert('خطأ في الخادم'));
 }
+
+// ===== التسجيل الصوتي =====
 function startRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); return; }
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
-            const form = new FormData();
-            form.append('file', file);
-            form.append('private_with', other);
-            fetch('/upload_file', { method: 'POST', body: form });
-            stream.getTracks().forEach(t => t.stop());
-        };
-        mediaRecorder.start();
-        alert('🎙️ جارٍ التسجيل... اضغط مرة أخرى للإيقاف.');
-    });
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        document.getElementById('recordingIndicator').classList.remove('active');
+        socket.emit('recording', { private_with: other, status: 'stopped' });
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
+                uploadFileDirect(file, null, other);
+                stream.getTracks().forEach(t => t.stop());
+                mediaRecorder = null;
+                document.getElementById('recordingIndicator').classList.remove('active');
+                socket.emit('recording', { private_with: other, status: 'stopped' });
+            };
+            mediaRecorder.start();
+            document.getElementById('recordingIndicator').textContent = '🎙️ جارٍ التسجيل... اضغط زر 🎤 للإيقاف';
+            document.getElementById('recordingIndicator').classList.add('active');
+            socket.emit('recording', { private_with: other, status: 'started' });
+        })
+        .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
-function startCall(video) { alert('🚧 ميزة المكالمات قيد التطوير'); }
+
+// ===== المكالمات (WebRTC) =====
+let peerConnection = null;
+let localStream = null;
+let callActive = false;
+let callType = 'voice';
+
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+};
+
+socket.on('signal', async (data) => {
+    if (data.from !== other.toString()) return;
+    if (!peerConnection) {
+        if (data.signal.type === 'offer') {
+            await createPeerConnection(false);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+            callActive = true;
+            updateCallUI('connected');
+        }
+        return;
+    }
+    try {
+        if (data.signal.type === 'offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+            updateCallUI('connected');
+        } else if (data.signal.type === 'answer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            updateCallUI('connected');
+        } else if (data.signal.type === 'candidate') {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+        } else if (data.signal.type === 'end') {
+            endCall();
+        }
+    } catch (e) { console.error('Signal error:', e); }
+});
+
+async function createPeerConnection(isInitiator) {
+    peerConnection = new RTCPeerConnection(iceServers);
+    peerConnection.onicecandidate = (e) => {
+        if (e.candidate) {
+            socket.emit('signal', { target: other.toString(), signal: { type: 'candidate', candidate: e.candidate } });
+        }
+    };
+    peerConnection.ontrack = (e) => {
+        document.getElementById('remoteVideo').srcObject = e.streams[0];
+    };
+    if (isInitiator) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
+            document.getElementById('localVideo').srcObject = localStream;
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit('signal', { target: other.toString(), signal: offer });
+            callActive = true;
+            updateCallUI('connecting');
+        } catch (e) {
+            alert('فشل بدء المكالمة: ' + e);
+        }
+    }
+}
+
+function startCall(video) {
+    if (callActive) return;
+    callType = video ? 'video' : 'voice';
+    const window = document.getElementById('callWindow');
+    window.classList.add('active');
+    document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
+    document.getElementById('callAvatar').textContent = '👤';
+    document.getElementById('callStatus').textContent = 'جارٍ الاتصال...';
+    document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
+    createPeerConnection(true);
+}
+
+function updateCallUI(status) {
+    const statusEl = document.getElementById('callStatus');
+    if (status === 'connecting') statusEl.textContent = '⏳ جارٍ الاتصال...';
+    else if (status === 'connected') statusEl.textContent = '📞 متصل';
+    else if (status === 'ended') statusEl.textContent = '🔚 انتهت المكالمة';
+}
+
+function endCall() {
+    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    callActive = false;
+    document.getElementById('callWindow').classList.remove('active');
+    socket.emit('signal', { target: other.toString(), signal: { type: 'end' } });
+}
+
+function toggleMute() {
+    if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
+    }
+}
+function toggleVideo() {
+    if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
+    }
+}
+function toggleSpeaker() {
+    // يمكن تنفيذ تغيير إخراج الصوت إذا أردت
+}
 </script>
-</body></html>
+{% endblock %}

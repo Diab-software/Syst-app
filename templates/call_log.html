@@ -1,7 +1,24 @@
 {% extends "base.html" %}
-{% block title %}call_log - Syst{% endblock %}
-{% block nav_title %}call_log{% endblock %}
+{% block title %}سجل المكالمات - Syst{% endblock %}
+{% block nav_title %}سجل المكالمات{% endblock %}
 {% block content %}
-{% extends 'dashboard.html' %}
-
+<h2>📋 سجل المكالمات</h2>
+{% if calls %}
+<table class="call-log-table">
+    <thead><tr><th>مع</th><th>النوع</th><th>الوقت</th><th>المدة</th><th>الحالة</th></tr></thead>
+    <tbody>
+    {% for c in calls %}
+    <tr>
+        <td>{% if c.caller.username == user.username %}إلى {{ c.receiver.display_name }}{% else %}من {{ c.caller.display_name }}{% endif %}</td>
+        <td>{{ '📹 فيديو' if c.call_type == 'video' else '📞 صوت' }}</td>
+        <td>{{ c.start_time.strftime('%H:%M') }}</td>
+        <td>{{ c.duration_seconds or '--' }}</td>
+        <td>{% if c.status == 'initiated' %}⏳ بدأت{% elif c.status == 'accepted' %}✅ مقبولة{% elif c.status == 'ended' %}🔚 منتهية{% elif c.status == 'rejected' %}❌ مرفوضة{% elif c.status == 'missed' %}⏰ فائتة{% else %}{{ c.status }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p style="text-align:center;color:#888;">لا توجد مكالمات</p>
+{% endif %}
 {% endblock %}

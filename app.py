@@ -64,7 +64,7 @@ def decrypt(t):
     try: return cipher.decrypt(t.encode()).decode() if t else t
     except: return "[مشفر]"
 
-# ========== نماذج ==========
+# ========== نماذج قاعدة البيانات ==========
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)

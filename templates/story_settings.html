@@ -1,7 +1,23 @@
 {% extends "base.html" %}
-{% block title %}story_settings - Syst{% endblock %}
-{% block nav_title %}story_settings{% endblock %}
+{% block title %}إعدادات الستوري - Syst{% endblock %}
+{% block nav_title %}إعدادات الستوري{% endblock %}
 {% block content %}
-{% extends 'dashboard.html' %}
-
+<div class="settings-card">
+    <h3>📖 إعدادات الستوري</h3>
+    <form method="post">
+        <div class="settings-item">
+            <span>من يمكنه رؤية قصصي</span>
+            <select name="privacy">
+                <option value="everyone" {% if settings.privacy=='everyone' %}selected{% endif %}>الجميع</option>
+                <option value="contacts" {% if settings.privacy=='contacts' %}selected{% endif %}>جهات الاتصال</option>
+                <option value="nobody" {% if settings.privacy=='nobody' %}selected{% endif %}>لا أحد</option>
+            </select>
+        </div>
+        <div class="settings-item">
+            <span>مدة بقاء القصة (ساعات)</span>
+            <input type="number" name="duration_hours" value="{{ settings.duration_hours }}" min="1" max="72">
+        </div>
+        <button type="submit" style="margin-top:10px;">حفظ الإعدادات</button>
+    </form>
+</div>
 {% endblock %}
