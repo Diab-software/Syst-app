@@ -1,58 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الإعدادات - Syst</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container py-4" style="max-width:700px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="bi bi-gear"></i> الإعدادات</h4>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right"></i> رجوع</a>
-        </div>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endwith %}
-        <div class="card p-4 mb-4 shadow-sm border-0 rounded-4">
-            <h6><i class="bi bi-person-circle"></i> عرض البروفايل</h6>
-            <p class="text-muted">شاهد معلوماتك الشخصية وصورتك وإحصائياتك</p>
-            <a href="{{ url_for('profile') }}" class="btn btn-outline-primary rounded-pill"><i class="bi bi-eye"></i> عرض البروفايل</a>
-        </div>
-        <div class="card p-4 shadow-sm border-0 rounded-4">
-            <form method="POST">
-                <div class="mb-3"><label class="form-label">الاسم المعروض</label><input type="text" name="display_name" class="form-control" value="{{ user.display_name }}" required></div>
-                <div class="mb-3"><label class="form-label">الحالة</label><input type="text" name="status" class="form-control" value="{{ user.status or '' }}" placeholder="مثلاً: متاح، مشغول..."></div>
-                <div class="mb-3"><label class="form-label">خصوصية آخر ظهور</label><select name="privacy_last_seen" class="form-select"><option value="everyone" {{ 'selected' if user.privacy_last_seen=='everyone' }}>الجميع</option><option value="contacts" {{ 'selected' if user.privacy_last_seen=='contacts' }}>جهات الاتصال فقط</option><option value="nobody" {{ 'selected' if user.privacy_last_seen=='nobody' }}>لا أحد</option></select></div>
-                <div class="mb-3"><label class="form-label">خصوصية الحالة (متصل)</label><select name="privacy_online" class="form-select"><option value="everyone" {{ 'selected' if user.privacy_online=='everyone' }}>الجميع</option><option value="contacts" {{ 'selected' if user.privacy_online=='contacts' }}>جهات الاتصال فقط</option><option value="nobody" {{ 'selected' if user.privacy_online=='nobody' }}>لا أحد</option></select></div>
-                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2">حفظ التغييرات</button>
-            </form>
-        </div>
-        <div class="card p-4 mt-4 shadow-sm border-0 rounded-4">
-            <h6>صورة الملف الشخصي</h6>
-            <form action="{{ url_for('upload_profile_pic') }}" method="POST" enctype="multipart/form-data">
-                <div class="mb-3"><input type="file" name="profile_pic" class="form-control" accept="image/*"></div>
-                <button type="submit" class="btn btn-outline-primary w-100 rounded-pill">رفع صورة</button>
-            </form>
-        </div>
-        <div class="card p-4 mt-4 shadow-sm border-0 rounded-4">
-            <h6>إنشاء مجموعة جديدة</h6>
-            <form action="{{ url_for('create_group') }}" method="POST" class="d-flex gap-2"><input type="text" name="name" class="form-control" placeholder="اسم المجموعة" required><button type="submit" class="btn btn-success rounded-pill">إنشاء</button></form>
-        </div>
-        <div class="card p-4 mt-4 shadow-sm border-0 rounded-4">
-            <h6>الانضمام إلى مجموعة</h6>
-            <form action="{{ url_for('join_group') }}" method="POST" class="d-flex gap-2"><input type="number" name="group_id" class="form-control" placeholder="معرف المجموعة" required><button type="submit" class="btn btn-info rounded-pill">انضمام</button></form>
-        </div>
-        <div class="card p-4 mt-4 border-danger shadow-sm rounded-4">
-            <h6 class="text-danger">حذف الحساب</h6>
-            <form action="{{ url_for('delete_account') }}" method="POST" onsubmit="return confirm('هل أنت متأكد؟ سيتم حذف كل شيء نهائياً!')"><button type="submit" class="btn btn-danger w-100 rounded-pill">حذف حسابي</button></form>
-        </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>الإعدادات - Syst</title><link rel="stylesheet" href="/static/style.css"><script>
+function deleteAccount(){if(!confirm('⚠️ هل أنت متأكد من حذف حسابك؟'))return;fetch('/delete_account',{method:'POST'}).then(r=>r.json()).then(d=>{if(d.success){alert('✅ تم حذف حسابك');window.location.href='/login'}else alert('❌ '+d.error)}).catch(()=>alert('❌ خطأ في الخادم'))}
+function unblockUser(id,name){if(!confirm(`هل تريد إلغاء حظر ${name}؟`))return;fetch(`/unblock_user/${id}`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.success){alert('✅ '+d.message);location.reload()}else alert('❌ '+d.error)})}
+</script></head>
+<body><nav class="navbar"><div class="logo">⚙️ Syst <span>إعدادات</span></div><div style="display:flex;gap:8px;"><button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️ رجوع</button></div></nav>
+<div class="container">
+<div class="settings-card"><h3>🔒 الخصوصية</h3><form method="post"><div class="settings-item"><span>من يمكنه رؤية آخر ظهور</span><select name="privacy_last_seen"><option value="everyone" {% if user.privacy_last_seen=='everyone' %}selected{% endif %}>الجميع</option><option value="contacts" {% if user.privacy_last_seen=='contacts' %}selected{% endif %}>جهات الاتصال</option><option value="nobody" {% if user.privacy_last_seen=='nobody' %}selected{% endif %}>لا أحد</option></select></div><div class="settings-item"><span>من يمكنه رؤية أنني متصل</span><select name="privacy_online"><option value="everyone" {% if user.privacy_online=='everyone' %}selected{% endif %}>الجميع</option><option value="contacts" {% if user.privacy_online=='contacts' %}selected{% endif %}>جهات الاتصال</option><option value="nobody" {% if user.privacy_online=='nobody' %}selected{% endif %}>لا أحد</option></select></div><button type="submit">حفظ</button></form></div>
+<div class="settings-card"><h3>🚫 المحظورون</h3>{% if blocked_users %}{% for bu in blocked_users %}<div class="settings-item"><span>{{ bu.display_name }} (@{{ bu.username }})</span><button onclick="unblockUser({{ bu.id }}, '{{ bu.display_name }}')" style="background:#EF4444;">إلغاء الحظر</button></div>{% endfor %}{% else %}<p style="color:var(--text-light);">لا يوجد محظورون</p>{% endif %}</div>
+<div class="settings-card"><h3>📁 المجموعات</h3><div class="settings-item"><span>إنشاء مجموعة</span><form action="/create_group" method="post" style="display:flex;gap:10px;flex-wrap:wrap;"><input type="text" name="name" placeholder="اسم المجموعة" required><input type="text" name="description" placeholder="الوصف (اختياري)"><button type="submit">إنشاء</button></form></div><div class="settings-item"><span>الانضمام إلى مجموعة</span><form action="/join_group" method="post" style="display:flex;gap:10px;"><input type="number" name="group_id" placeholder="المعرف"><button type="submit">انضمام</button></form></div></div>
+<div class="settings-card" style="border:1px solid #EF4444;"><h3 style="color:#EF4444;">⚠️ منطقة خطرة</h3><div class="settings-item"><span>حذف الحساب</span><button onclick="deleteAccount()" style="background:#EF4444;">🗑️ حذف الحساب</button></div></div>
+</div></body></html>

@@ -1,35 +1,6 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>البحث - Syst</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container py-4" style="max-width:700px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="bi bi-search"></i> البحث عن مستخدمين</h4>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right"></i> رجوع</a>
-        </div>
-        <div class="list-group">
-            {% for u in users %}
-                <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action d-flex align-items-center">
-                    <div class="chat-item-avatar me-3" style="width:40px; height:40px; font-size:16px;">{{ u.display_name[0] }}</div>
-                    <div><strong>{{ u.display_name }}</strong><small class="d-block text-muted">@{{ u.username }}</small></div>
-                    <div class="ms-auto">
-                        <span class="status-dot {{ 'online' if u.is_online else 'offline' }}"></span>
-                        <small class="text-muted me-1">{{ 'متصل' if u.is_online else 'غير متصل' }}</small>
-                        <form action="{{ url_for('block_user', user_id=u.id) }}" method="POST" style="display:inline;"><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('حظر {{ u.display_name }}؟')">حظر</button></form>
-                    </div>
-                </a>
-            {% else %}
-                <div class="text-muted text-center py-3">لا توجد نتائج</div>
-            {% endfor %}
-        </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>بحث - Syst</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><nav class="navbar"><div class="logo">🔍 Syst <span>بحث</span></div><button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️ رجوع</button></nav>
+<div class="container"><div class="settings-card"><h3>🔍 بحث عن أشخاص</h3><input type="text" id="search-input" placeholder="ابحث باسم..." oninput="filterUsers(this.value)" style="width:100%;padding:12px;border-radius:30px;border:2px solid #e5e7eb;font-size:16px;"><div id="search-results">{% for u in users %}<div class="result-item" data-username="{{ u.username }}" data-display="{{ u.display_name }}" style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;"><span>👤 {{ u.display_name }} <span style="color:#888;font-size:13px;">@{{ u.username }}</span></span><button onclick="window.location.href='/chat/private/{{ u.id }}'" style="background:var(--primary);color:white;border:none;padding:4px 16px;border-radius:30px;cursor:pointer;">💬</button></div>{% endfor %}</div></div></div>
+<script>function filterUsers(q){const items=document.querySelectorAll('.result-item');q=q.toLowerCase();items.forEach(i=>{const un=i.dataset.username.toLowerCase();const dn=i.dataset.display.toLowerCase();i.style.display=(un.includes(q)||dn.includes(q))?'flex':'none';});}</script>
+</body></html>

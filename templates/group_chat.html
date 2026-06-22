@@ -1,129 +1,97 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دردشة المجموعة - {{ group.name }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
-    <style>
-        .chat-toolbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-        .chat-toolbar .btn-icon { width:40px; height:40px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#f8f9fa; border:1px solid #e9ecef; color:#495057; transition:all 0.2s; font-size:18px; }
-        .chat-toolbar .btn-icon:hover { background:#e9ecef; transform:scale(1.05); }
-        .chat-toolbar .form-control { flex:1; min-width:120px; border-radius:30px; padding:10px 18px; border:1px solid #e0e0e0; }
-        .chat-toolbar .send-btn { border-radius:30px; padding:10px 24px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); border:none; color:white; font-weight:500; transition:all 0.3s; }
-        .chat-toolbar .send-btn:hover { transform:scale(1.02); box-shadow:0 6px 20px rgba(102,126,234,0.35); }
-        .emoji-picker-container { position:absolute; bottom:70px; left:0; background:white; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.12); padding:12px; display:none; z-index:1000; min-width:240px; }
-        .emoji-picker-container.show { display:block; }
-        .emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
-        .emoji-grid .emoji-btn { font-size:28px; padding:6px 0; border:none; background:transparent; border-radius:10px; cursor:pointer; transition:background 0.15s; }
-        .emoji-grid .emoji-btn:hover { background:#f0f0f0; }
-        #typing-indicator { display:none; align-items:center; gap:8px; padding:8px 16px; background:rgba(255,255,255,0.9); border-radius:30px; margin:4px 0 8px 0; font-size:14px; color:#6c757d; backdrop-filter:blur(4px); box-shadow:0 2px 8px rgba(0,0,0,0.04); max-width:fit-content; }
-        .typing-dots { display:flex; gap:4px; align-items:center; }
-        .typing-dots span { width:8px; height:8px; background:#667eea; border-radius:50%; display:inline-block; animation:typingBounce 1.4s infinite ease-in-out both; }
-        .typing-dots span:nth-child(1) { animation-delay:-0.32s; }
-        .typing-dots span:nth-child(2) { animation-delay:-0.16s; }
-        .typing-dots span:nth-child(3) { animation-delay:0s; }
-        @keyframes typingBounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
-        .typing-text { font-weight:500; }
-    </style>
-</head>
-<body>
-    <div class="container chat-container py-4">
-        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-            <div class="chat-header d-flex align-items-center">
-                <i class="bi bi-people-fill fs-2 me-2"></i>
-                <div><h5 class="mb-0">{{ group.name }}</h5><small class="opacity-75">ID: {{ group.id }}</small></div>
-                <div class="ms-auto"><a href="{{ url_for('dashboard') }}" class="btn btn-light btn-sm rounded-circle"><i class="bi bi-arrow-right"></i></a></div>
-            </div>
-            <div id="chat-messages" class="chat-messages">
-                {% for msg in messages %}
-                    {% set is_own = (msg.user_id == user.id) %}
-                    <div class="d-flex mb-3 {{ 'justify-content-end' if is_own else 'justify-content-start' }}">
-                        <div class="d-flex {{ 'flex-row-reverse' if is_own else '' }}" style="align-items:flex-end;">
-                            <div class="avatar me-2 ms-2"><i class="bi {{ 'bi-person-circle' if is_own else 'bi-person' }}"></i></div>
-                            <div>
-                                <div class="message-bubble {{ 'sent' if is_own else 'received' }}">
-                                    <strong>{{ msg.user.display_name }}</strong><br>
-                                    {{ msg.content }}
-                                    {% if msg.file_name %}<br><small>📎 <a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">{{ msg.file_name }}</a></small>{% endif %}
-                                    {% if msg.pinned %}<span class="pinned-badge"><i class="bi bi-pin-fill"></i> مثبت</span>{% endif %}
-                                </div>
-                                <div class="time-stamp text-muted text-end">{{ msg.timestamp.strftime('%H:%M') }}</div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-                <div id="typing-indicator">
-                    <span class="typing-dots"><span></span><span></span><span></span></span>
-                    <span class="typing-text">يكتب...</span>
-                </div>
-            </div>
-            <div class="chat-footer">
-                <div class="chat-toolbar position-relative">
-                    <button id="file-upload-btn" class="btn-icon" title="رفع ملفات"><i class="bi bi-paperclip"></i></button>
-                    <input type="file" id="file-input" multiple accept="*/*" style="display:none;">
-                    <button id="record-btn" class="btn-icon" title="تسجيل صوتي"><i class="bi bi-mic"></i></button>
-                    <button id="emoji-toggle" class="btn-icon" title="إيموجي"><i class="bi bi-emoji-smile"></i></button>
-                    <div id="emoji-picker" class="emoji-picker-container">
-                        <div class="emoji-grid">
-                            <button class="emoji-btn" data-emoji="😊">😊</button><button class="emoji-btn" data-emoji="😂">😂</button>
-                            <button class="emoji-btn" data-emoji="❤️">❤️</button><button class="emoji-btn" data-emoji="👍">👍</button>
-                            <button class="emoji-btn" data-emoji="🔥">🔥</button><button class="emoji-btn" data-emoji="🎉">🎉</button>
-                            <button class="emoji-btn" data-emoji="😍">😍</button><button class="emoji-btn" data-emoji="🤔">🤔</button>
-                            <button class="emoji-btn" data-emoji="😎">😎</button><button class="emoji-btn" data-emoji="🙏">🙏</button>
-                            <button class="emoji-btn" data-emoji="💪">💪</button><button class="emoji-btn" data-emoji="👋">👋</button>
-                        </div>
-                    </div>
-                    <input type="text" id="message-input" class="form-control" placeholder="اكتب رسالتك..." autocomplete="off">
-                    <button id="send-btn" class="send-btn"><i class="bi bi-send-fill"></i> إرسال</button>
-                </div>
-            </div>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>محادثة مجموعة - Syst</title><link rel="stylesheet" href="/static/style.css"><script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script></head>
+<body><nav class="navbar"><div class="logo">💬 Syst <span>مجموعة</span></div><div style="display:flex;gap:8px;align-items:center;"><span style="font-weight:500;">{{ group.name }}</span>
+    {% if is_admin %}<button onclick="window.location.href='/group_settings/{{ group.id }}'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⚙️</button>{% endif %}
+    <button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️</button>
+</div></nav>
+<div class="container">
+    <div class="messages" id="messages">
+        {% for msg in messages %}
+        <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}" id="msg-{{ msg.id }}">
+            <div class="msg-header"><span class="user">{{ msg.user.display_name }}</span><span class="time">{{ msg.timestamp.strftime('%H:%M') }}</span></div>
+            <p>{{ msg.content }}</p>
+            {% if msg.file_path %}<div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل</a></div>{% endif %}
+            <div class="actions"><button onclick="deleteMsg({{ msg.id }})">🗑️</button><button onclick="pinMsg({{ msg.id }})">📌</button></div>
         </div>
+        {% endfor %}
     </div>
+    <div class="input-area">
+        <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
+        <div class="btn-group">
+            <button onclick="sendMsg()">إرسال</button>
+            <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+            <button class="icon-btn" onclick="startRecording()">🎤</button>
+        </div>
+        <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this, {{ group.id }}, null)">
+    </div>
+</div>
+<script>
+const socket = io();
+const group = {{ group.id }};
+socket.emit('join_group', { group_id: group });
 
-    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
-    <script>
-        window.currentUsername = "{{ session['username'] }}";
-        window.groupId = {{ group.id }};
-        window.privateWithId = null;
-        window.socket = io();
+let mediaRecorder = null;
+let audioChunks = [];
+function startRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
+                uploadFileDirect(file, group, null);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+            alert('🎙️ جارٍ التسجيل... اضغط مرة أخرى للإيقاف.');
+        })
+        .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
+}
 
-        window.socket.on('connect', function() {
-            console.log('✅ Socket متصل');
-            window.socket.emit('join_group', { group_id: window.groupId });
-        });
+function uploadFile(input, group_id, private_with) {
+    const file = input.files[0];
+    if (!file) return;
+    uploadFileDirect(file, group_id, private_with);
+    input.value = '';
+}
+function uploadFileDirect(file, group_id, private_with) {
+    const form = new FormData();
+    form.append('file', file);
+    if (group_id) form.append('group_id', group_id);
+    if (private_with) form.append('private_with', private_with);
+    fetch('/upload_file', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { /* الرسالة ستظهر عبر socket */ }
+            else alert('فشل رفع الملف: '+d.error);
+        })
+        .catch(() => alert('خطأ في الخادم'));
+}
 
-        window.socket.on('new_message', function(data) {
-            if (data.group_id == window.groupId) {
-                if (typeof window.appendChatMessage === 'function') {
-                    window.appendChatMessage(data);
-                } else {
-                    location.reload();
-                }
-            }
-        });
+socket.on('new_message', function(data) {
+    if (data.group_id != group) return;
+    const div = document.createElement('div');
+    div.className = `msg ${data.user_id == {{ user.id }} ? 'my-msg' : 'other-msg'}`;
+    div.innerHTML = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div><p>${data.content}</p>`;
+    if (data.file_url) div.innerHTML += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل</a></div>`;
+    document.getElementById('messages').appendChild(div);
+    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+});
 
-        window.socket.on('typing', function(data) {
-            if (data.from && data.from !== window.currentUsername) {
-                const indicator = document.getElementById('typing-indicator');
-                if (indicator) {
-                    indicator.style.display = 'flex';
-                    indicator.querySelector('.typing-text').textContent = data.display_name + ' يكتب...';
-                    clearTimeout(window.typingTimeout);
-                    window.typingTimeout = setTimeout(function() {
-                        indicator.style.display = 'none';
-                    }, 2000);
-                }
-            }
-        });
-
-        const script = document.createElement('script');
-        script.src = "{{ url_for('static', filename='js/chat.js') }}";
-        document.body.appendChild(script);
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('send_message', { message: text, group_id: group });
+    input.value = '';
+}
+function deleteMsg(id) { fetch(`/delete_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
+function pinMsg(id) { fetch(`/pin_message/${id}`, {method:'POST'}).then(()=>location.reload()); }
+</script>
+</body></html>

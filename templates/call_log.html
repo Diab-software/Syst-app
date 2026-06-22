@@ -1,39 +1,4 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل المكالمات - Syst</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container py-4" style="max-width:700px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="bi bi-telephone"></i> سجل المكالمات</h4>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right"></i> رجوع</a>
-        </div>
-        <div class="list-group">
-            {% for call in calls %}
-                {% set caller = call.caller.username if call.caller else 'غير معروف' %}
-                {% set receiver = call.receiver.username if call.receiver else 'غير معروف' %}
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-{{ 'phone-outbound' if call.caller_id == user.id else 'phone-inbound' }}"></i>
-                        <strong>{{ caller if call.caller_id == user.id else receiver }}</strong>
-                        <small class="d-block text-muted">{{ call.start_time.strftime('%Y-%m-%d %H:%M') }}</small>
-                    </div>
-                    <div>
-                        <span class="badge bg-{{ 'success' if call.status=='accepted' else 'danger' if call.status=='rejected' else 'warning' }}">{{ call.status }}</span>
-                        {% if call.duration_seconds %}<span class="badge bg-secondary">{{ call.duration_str }}</span>{% endif %}
-                    </div>
-                </div>
-            {% else %}
-                <div class="text-muted text-center py-3">لا توجد مكالمات</div>
-            {% endfor %}
-        </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>سجل المكالمات - Syst</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><nav class="navbar"><div class="logo">📋 Syst <span>سجل المكالمات</span></div><button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️ رجوع</button></nav>
+<div class="container"><h2>📋 سجل المكالمات</h2>{% if calls %}<table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.04);"><thead><tr style="background:#fafbfc;"><th style="padding:12px 16px;text-align:right;">مع</th><th style="padding:12px 16px;text-align:right;">النوع</th><th style="padding:12px 16px;text-align:right;">الوقت</th><th style="padding:12px 16px;text-align:right;">المدة</th><th style="padding:12px 16px;text-align:right;">الحالة</th></tr></thead><tbody>{% for c in calls %}<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:12px 16px;">{% if c.caller.username == user.username %}إلى {{ c.receiver.display_name }}{% else %}من {{ c.caller.display_name }}{% endif %}</td><td style="padding:12px 16px;">{{ '📹 فيديو' if c.call_type == 'video' else '📞 صوت' }}</td><td style="padding:12px 16px;">{{ c.start_time.strftime('%H:%M') }}</td><td style="padding:12px 16px;">{{ c.duration_seconds or '--' }}</td><td style="padding:12px 16px;">{% if c.status == 'initiated' %}⏳ بدأت{% elif c.status == 'accepted' %}✅ مقبولة{% elif c.status == 'ended' %}🔚 منتهية{% elif c.status == 'rejected' %}❌ مرفوضة{% elif c.status == 'missed' %}⏰ فائتة{% else %}{{ c.status }}{% endif %}</td></tr>{% endfor %}</tbody></table>{% else %}<p style="text-align:center;color:#888;">لا توجد مكالمات</p>{% endif %}</div></body></html>

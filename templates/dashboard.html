@@ -1,163 +1,102 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اللوحة الرئيسية - Syst</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .story-add-btn { width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%); border:3px solid white; box-shadow:0 4px 15px rgba(245,87,108,0.4); display:flex; align-items:center; justify-content:center; font-size:32px; color:white; cursor:pointer; transition:all 0.3s; }
-        .story-add-btn:hover { transform:scale(1.08); box-shadow:0 6px 25px rgba(245,87,108,0.6); }
-        .story-circle { width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%); padding:3px; display:inline-block; }
-        .story-circle img { width:100%; height:100%; border-radius:50%; border:2px solid white; object-fit:cover; }
-        .story-circle .story-placeholder { width:100%; height:100%; border-radius:50%; background:#e9ecef; display:flex; align-items:center; justify-content:center; font-size:24px; color:#6c757d; }
-        .list-group-item { border-radius:12px !important; margin-bottom:6px; border:1px solid #f0f0f0; transition:all 0.2s; }
-        .list-group-item:hover { background:#f8f9ff; border-color:#667eea; }
-        .chat-item-avatar { width:48px; height:48px; border-radius:50%; background:#667eea; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; flex-shrink:0; }
-        .status-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
-        .status-dot.online { background:#28a745; }
-        .status-dot.offline { background:#adb5bd; }
-    </style>
-</head>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>المحادثات - Syst</title><link rel="stylesheet" href="/static/style.css"></head>
 <body>
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="mb-0"><i class="bi bi-chat-dots-fill text-primary"></i> Syst</h4>
-                <small class="text-muted">مرحباً، {{ display_name }}</small>
-            </div>
-            <div>
-                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm me-2"><i class="bi bi-person-circle"></i></a>
-                <a href="{{ url_for('settings') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-gear"></i></a>
-                <a href="{{ url_for('search') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-search"></i></a>
-                <a href="{{ url_for('call_log') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-telephone"></i></a>
-                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-right"></i></a>
-            </div>
-        </div>
-
-        <!-- القصص -->
-        <div class="mb-4">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="text-center" data-bs-toggle="modal" data-bs-target="#storyModal">
-                    <div class="story-add-btn mx-auto"><i class="bi bi-plus"></i></div>
-                    <small class="text-muted d-block mt-1">إضافة قصة</small>
-                </div>
-                {% for story in stories %}
-                    <a href="{{ url_for('view_story', story_id=story.id) }}" class="text-decoration-none text-center">
-                        <div class="story-circle">
-                            {% if story.media_path %}
-                                <img src="{{ url_for('download_story', filename=story.media_path) }}" alt="story">
-                            {% else %}
-                                <div class="story-placeholder"><i class="bi bi-file-text"></i></div>
-                            {% endif %}
-                        </div>
-                        <small class="d-block text-muted mt-1">{{ story.user.display_name }}</small>
-                    </a>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- المحادثات الخاصة -->
-        <h6 class="text-muted"><i class="bi bi-person"></i> المحادثات الخاصة</h6>
-        <div class="list-group mb-4">
-            {% for u in private_users %}
-                <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action d-flex align-items-center">
-                    <div class="chat-item-avatar me-3">{{ u.display_name[0] }}</div>
-                    <div class="flex-grow-1">
-                        <strong>{{ u.display_name }}</strong>
-                        <small class="d-block text-muted">@{{ u.username }}</small>
-                    </div>
-                    <div>
-                        <span class="status-dot {{ 'online' if u.is_online else 'offline' }}"></span>
-                        <small class="text-muted me-1">{{ 'متصل' if u.is_online else 'غير متصل' }}</small>
-                    </div>
-                </a>
-            {% else %}
-                <div class="text-muted text-center py-3">لا توجد محادثات خاصة</div>
-            {% endfor %}
-        </div>
-
-        <!-- المجموعات -->
-        <h6 class="text-muted"><i class="bi bi-people"></i> المجموعات</h6>
-        <div class="list-group">
-            {% for g in groups %}
-                <a href="{{ url_for('group_chat', group_id=g.id) }}" class="list-group-item list-group-item-action d-flex align-items-center">
-                    <div class="chat-item-avatar me-3" style="background:#764ba2;"><i class="bi bi-people-fill"></i></div>
-                    <div>
-                        <strong>{{ g.name }}</strong>
-                        <small class="d-block text-muted">ID: {{ g.id }}</small>
-                    </div>
-                </a>
-            {% else %}
-                <div class="text-muted text-center py-3">لا توجد مجموعات</div>
-            {% endfor %}
-        </div>
+<nav class="navbar">
+    <div class="logo">💬 Syst <span>دردشة</span></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-weight:500;">{{ user.display_name }}</span>
+        <div class="hamburger" onclick="toggleSidebar()">☰</div>
     </div>
-
-    <!-- مودال إضافة ستوري -->
-    <div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0 shadow-lg">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title"><i class="bi bi-camera"></i> إضافة قصة جديدة</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="{{ url_for('upload_story') }}" method="POST" enctype="multipart/form-data" id="storyForm">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">نوع القصة</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="story_type" id="storyTypeMedia" value="media" checked>
-                                    <label class="form-check-label" for="storyTypeMedia">وسائط (صورة / فيديو)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="story_type" id="storyTypeText" value="text">
-                                    <label class="form-check-label" for="storyTypeText">نص</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="mediaField" class="mb-3">
-                            <label class="form-label fw-bold">اختر ملف</label>
-                            <input type="file" class="form-control" name="story_media" accept="image/*,video/*">
-                            <small class="text-muted">صور أو فيديوهات</small>
-                        </div>
-                        <div id="textField" class="mb-3" style="display:none;">
-                            <label class="form-label fw-bold">نص القصة</label>
-                            <textarea class="form-control" name="content_text" rows="3" placeholder="اكتب قصتك هنا..."></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">تعليق (اختياري)</label>
-                            <input type="text" class="form-control" name="caption" placeholder="أضف تعليقاً للقصة">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2"><i class="bi bi-cloud-upload"></i> نشر القصة</button>
-                    </form>
-                </div>
+</nav>
+<div class="sidebar" id="sidebar">
+    <button class="close-btn" onclick="toggleSidebar()">✕</button>
+    <div class="user-info">
+        {% if user.profile_pic %}
+        <div class="avatar" style="background-image:url({{ url_for('download_file', filename='profiles/'+user.profile_pic) }});"></div>
+        {% else %}
+        <div class="avatar" style="background:var(--primary);">{{ user.display_name[0]|upper }}</div>
+        {% endif %}
+        <div class="name">{{ user.display_name }}</div>
+        <div class="username">@{{ user.username }}</div>
+    </div>
+    <div class="menu-items">
+        <a class="menu-item" href="/profile"><span class="icon">👤</span> الملف الشخصي</a>
+        <a class="menu-item" href="/search"><span class="icon">🔍</span> بحث</a>
+        <a class="menu-item" href="/settings"><span class="icon">⚙️</span> الإعدادات</a>
+        <a class="menu-item" href="/story_settings"><span class="icon">📖</span> إعدادات الستوري</a>
+        <a class="menu-item" href="/call_log"><span class="icon">📋</span> سجل المكالمات</a>
+        <a class="menu-item logout" href="/logout"><span class="icon">🚪</span> خروج</a>
+    </div>
+</div>
+<div class="container">
+    <div class="story-bar">
+        <div class="story-item" onclick="document.getElementById('storyUpload').click();">
+            <div class="circle"><div class="add">+</div></div>
+            <div class="name">قصتي</div>
+        </div>
+        <input type="file" id="storyUpload" accept="image/*,video/*" style="display:none;" onchange="uploadStory(this)">
+        {% for s in my_stories %}
+        <div class="story-item" onclick="window.location.href='/story/{{ s.id }}'">
+            <div class="circle">{% if s.media_type == 'image' %}<img src="{{ url_for('download_file', filename='stories/'+s.media_path) }}">{% elif s.media_type == 'text' %}<span style="font-size:30px;">📝</span>{% else %}<span style="font-size:30px;">🎬</span>{% endif %}</div>
+            <div class="name">قصتي</div>
+        </div>
+        {% endfor %}
+        {% for s in stories %}
+        <div class="story-item" onclick="window.location.href='/story/{{ s.id }}'">
+            <div class="circle">{% if s.media_type == 'image' %}<img src="{{ url_for('download_file', filename='stories/'+s.media_path) }}">{% elif s.media_type == 'text' %}<span style="font-size:30px;">📝</span>{% else %}<span style="font-size:30px;">🎬</span>{% endif %}</div>
+            <div class="name">{{ s.user.display_name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <h2>📨 المحادثات</h2>
+    <h3>👤 خاصة</h3>
+    {% for u in private_users %}
+    <div class="chat-card" onclick="window.location.href='/chat/private/{{ u.id }}'">
+        <div class="info">
+            {% if u.profile_pic %}
+            <div class="avatar" style="background-image:url({{ url_for('download_file', filename='profiles/'+u.profile_pic) }});background-size:cover;"></div>
+            {% else %}
+            <div class="avatar" style="background:var(--primary);">{{ u.display_name[0]|upper }}</div>
+            {% endif %}
+            <div>
+                <div class="name">{{ u.display_name }}</div>
+                <div class="username">@{{ u.username }}</div>
+                {% if u.status %}<div class="status">{{ u.status }}</div>{% endif %}
+                {% if u.is_online %}<span style="color:#10B981;font-size:12px;">🟢 متصل</span>{% endif %}
             </div>
         </div>
+        <button onclick="event.stopPropagation();window.location.href='/chat/private/{{ u.id }}'">فتح 💬</button>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const radios = document.querySelectorAll('input[name="story_type"]');
-            const mediaField = document.getElementById('mediaField');
-            const textField = document.getElementById('textField');
-            function toggleFields() {
-                const selected = document.querySelector('input[name="story_type"]:checked');
-                if (selected.value === 'media') {
-                    mediaField.style.display = 'block';
-                    textField.style.display = 'none';
-                } else {
-                    mediaField.style.display = 'none';
-                    textField.style.display = 'block';
-                }
-            }
-            radios.forEach(r => r.addEventListener('change', toggleFields));
-            toggleFields();
-        });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    {% else %}
+    <p style="color:#888;text-align:center;">لا توجد محادثات خاصة</p>
+    {% endfor %}
+    <h3>📁 مجموعات</h3>
+    {% for g in groups %}
+    <div class="chat-card" onclick="window.location.href='/chat/group/{{ g.id }}'">
+        <div class="info">
+            <div class="avatar" style="background:linear-gradient(135deg,#10B981,#059669);">👥</div>
+            <div>
+                <div class="name">{{ g.name }}</div>
+                <div class="username">مجموعة</div>
+                {% if g.description %}<div class="status">{{ g.description }}</div>{% endif %}
+            </div>
+        </div>
+        <button onclick="event.stopPropagation();window.location.href='/chat/group/{{ g.id }}'">فتح 💬</button>
+    </div>
+    {% else %}
+    <p style="color:#888;text-align:center;">لا توجد مجموعات</p>
+    {% endfor %}
+</div>
+<script>
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+function uploadStory(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('story_media', file);
+    form.append('story_type', 'media');
+    form.append('caption', '');
+    fetch('/upload_story', { method: 'POST', body: form }).then(() => location.reload()).catch(() => alert('فشل رفع القصة'));
+}
+</script>
+</body></html>

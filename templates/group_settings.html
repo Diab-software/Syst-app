@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>إعدادات المجموعة - Syst</title><link rel="stylesheet" href="/static/style.css"><script>
+function addMember(groupId) {
+    const username = prompt('أدخل اسم المستخدم لإضافته:');
+    if (!username) return;
+    fetch(`/group_add_member/${groupId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `username=${encodeURIComponent(username)}`
+    }).then(r=>r.json()).then(d=>{
+        if(d.success) { alert('✅ '+d.message); location.reload(); }
+        else alert('❌ '+d.error);
+    }).catch(()=>alert('خطأ في الخادم'));
+}
+function removeMember(groupId, memberId, name) {
+    if(!confirm(`هل تريد إزالة ${name} من المجموعة؟`)) return;
+    fetch(`/group_remove_member/${groupId}/${memberId}`, {method:'POST'})
+    .then(r=>r.json()).then(d=>{
+        if(d.success) { alert('✅ '+d.message); location.reload(); }
+        else alert('❌ '+d.error);
+    }).catch(()=>alert('خطأ في الخادم'));
+}
+function toggleAdmin(groupId, memberId, name) {
+    if(!confirm(`تغيير صلاحيات ${name}؟`)) return;
+    fetch(`/group_set_admin/${groupId}/${memberId}`, {method:'POST'})
+    .then(r=>r.json()).then(d=>{
+        if(d.success) { alert('✅ '+d.message); location.reload(); }
+        else alert('❌ '+d.error);
+    }).catch(()=>alert('خطأ في الخادم'));
+}
+</script></head>
+<body>
+<nav class="navbar"><div class="logo">⚙️ Syst <span>إعدادات المجموعة</span></div><button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️ رجوع</button></nav>
+<div class="container">
+    <div class="settings-card">
+        <h3>📁 {{ group.name }}</h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            {% if group.group_pic %}<img src="{{ url_for('download_file', filename='profiles/'+group.group_pic) }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">{% else %}<div style="width:80px;height:80px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:32px;">👥</div>{% endif %}
+            <form action="/upload_group_pic/{{ group.id }}" method="post" enctype="multipart/form-data">
+                <input type="file" name="group_pic" accept="image/*" onchange="this.form.submit()" style="font-size:14px;">
+            </form>
+        </div>
+        <form method="post">
+            <div class="settings-item"><span>اسم المجموعة</span><input type="text" name="name" value="{{ group.name }}"></div>
+            <div class="settings-item"><span>الوصف</span><textarea name="description" rows="2" style="min-width:200px;">{{ group.description or '' }}</textarea></div>
+            <div class="settings-item"><span>الحالة</span><select name="status"><option value="active" {% if group.status=='active' %}selected{% endif %}>نشطة</option><option value="archived" {% if group.status=='archived' %}selected{% endif %}>مؤرشفة</option><option value="private" {% if group.status=='private' %}selected{% endif %}>خاصة</option></select></div>
+            <button type="submit">حفظ التغييرات</button>
+        </form>
+    </div>
+    <div class="settings-card"><h3>👥 الأعضاء</h3>
+        <button onclick="addMember({{ group.id }})" style="margin-bottom:12px;">➕ إضافة عضو</button>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="background:#f9fafb;"><th style="text-align:right;padding:8px;">المستخدم</th><th style="text-align:right;padding:8px;">الدور</th><th style="text-align:right;padding:8px;">إجراءات</th></tr>
+            {% for m in members %}
+            <tr style="border-bottom:1px solid #f0f0f0;">
+                <td style="padding:8px;">{{ m[0].display_name }} (@{{ m[0].username }})</td>
+                <td style="padding:8px;">{% if m[1].is_admin %}👑 مشرف{% else %}عضو{% endif %}</td>
+                <td style="padding:8px;">
+                    {% if m[0].id != user.id %}
+                    <button onclick="removeMember({{ group.id }}, {{ m[0].id }}, '{{ m[0].display_name }}')" style="background:#EF4444;">إزالة</button>
+                    <button onclick="toggleAdmin({{ group.id }}, {{ m[0].id }}, '{{ m[0].display_name }}')" style="background:#F59E0B;">{% if m[1].is_admin %}إلغاء مشرف{% else %}تعيين مشرف{% endif %}</button>
+                    {% else %}
+                    <span style="color:#888;">أنت</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+</body></html>
