@@ -43,7 +43,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# ========== SocketIO مع eventlet ==========
+# ========== SocketIO ==========
 try:
     import eventlet
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
@@ -64,7 +64,7 @@ def decrypt(t):
     try: return cipher.decrypt(t.encode()).decode() if t else t
     except: return "[مشفر]"
 
-# ========== نماذج قاعدة البيانات ==========
+# ========== نماذج ==========
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -245,7 +245,7 @@ def is_group_admin(user_id, group_id):
     membership = db.session.execute(db.select(GroupMembership).filter_by(user_id=user_id, group_id=group_id)).scalar_one_or_none()
     return membership and membership.is_admin
 
-# ========== مسارات المصادقة ==========
+# ========== المسارات ==========
 @app.route('/')
 def home():
     return redirect(url_for('dashboard' if 'username' in session else 'login'))
@@ -429,7 +429,6 @@ def reset_password():
         return redirect(url_for('login'))
     return render_template('reset_password.html', username=u)
 
-# ========== المسارات الرئيسية ==========
 @app.route('/dashboard')
 def dashboard():
     user = get_user_by_session()
@@ -485,7 +484,6 @@ def upload_profile_pic():
     flash('تم تحديث الصورة الشخصية','success')
     return redirect(url_for('profile'))
 
-# ========== الستوري ==========
 @app.route('/story_settings', methods=['GET','POST'])
 def story_settings():
     user = get_user_by_session()
@@ -559,7 +557,6 @@ def view_story(story_id):
         flash('لا يمكنك رؤية هذه القصة', 'danger'); return redirect(url_for('dashboard'))
     return render_template('view_story.html', story=story)
 
-# ========== المحادثات ==========
 @app.route('/chat/private/<int:user_id>')
 def private_chat(user_id):
     user = get_user_by_session()
@@ -595,7 +592,6 @@ def group_chat(group_id):
     messages = pinned_msgs + normal_msgs
     return render_template('group_chat.html', user=user, group=group, messages=messages, is_admin=membership.is_admin)
 
-# ========== إعدادات المجموعة ==========
 @app.route('/group_settings/<int:group_id>', methods=['GET','POST'])
 def group_settings(group_id):
     user = get_user_by_session()
@@ -708,7 +704,6 @@ def group_set_admin(group_id, member_id):
     db.session.commit()
     return jsonify({'success': True, 'message': 'تم تحديث صلاحيات المشرف'})
 
-# ========== رفع الملفات ==========
 @app.route('/upload_file', methods=['POST'])
 def upload_file_general():
     user = get_user_by_session()
@@ -726,7 +721,6 @@ def upload_file_general():
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"{timestamp}_{filename}"
     ftype = file_type(filename)
-    # إذا كان الملف تسجيلاً صوتياً (يبدأ بـ recording_) اعتبره صوتاً
     if filename.startswith('recording_'):
         ftype = 'audio'
     if ftype == 'audio':
@@ -759,7 +753,6 @@ def upload_file_general():
         }, namespace='/', room=room)
     return jsonify({'success': True, 'message': 'تم رفع الملف'})
 
-# ========== إنشاء المجموعات ==========
 @app.route('/create_group', methods=['POST'])
 def create_group():
     user = get_user_by_session()
@@ -785,7 +778,6 @@ def join_group():
     db.session.add(GroupMembership(user_id=user.id, group_id=gid)); db.session.commit()
     flash('تم الانضمام','success'); return redirect(url_for('settings'))
 
-# ========== تحميل الملفات ==========
 @app.route('/download/<path:filename>')
 def download_file(filename):
     if filename.startswith('profiles/'):
@@ -971,7 +963,6 @@ def handle_send_message(data):
         'reply_content': reply_content
     }, broadcast=True, room=room)
 
-# ========== إشارات WebRTC ==========
 @socketio.on('signal')
 def handle_signal(data):
     target = data.get('target')
