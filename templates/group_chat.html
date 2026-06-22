@@ -47,6 +47,7 @@ function startRecording() {
                 const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
                 uploadFileDirect(file, group, null);
                 stream.getTracks().forEach(t => t.stop());
+                mediaRecorder = null;
             };
             mediaRecorder.start();
             alert('🎙️ جارٍ التسجيل... اضغط مرة أخرى للإيقاف.');
@@ -68,8 +69,7 @@ function uploadFileDirect(file, group_id, private_with) {
     fetch('/upload_file', { method: 'POST', body: form })
         .then(r => r.json())
         .then(d => {
-            if (d.success) { /* الرسالة ستظهر عبر socket */ }
-            else alert('فشل رفع الملف: '+d.error);
+            if (!d.success) alert('فشل رفع الملف: '+d.error);
         })
         .catch(() => alert('خطأ في الخادم'));
 }

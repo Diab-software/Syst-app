@@ -18,7 +18,6 @@ PROFILE_FOLDER = 'uploads/profiles'
 STORY_FOLDER = 'uploads/stories'
 FILE_FOLDER = 'uploads/files'
 AUDIO_FOLDER = 'uploads/audio'
-
 ALLOWED_EXTENSIONS = {
     'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico',
     'mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', '3gp', 'ogv',
@@ -26,8 +25,6 @@ ALLOWED_EXTENSIONS = {
     'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'rtf', 'odt', 'ods', 'odp',
     'zip', 'rar', '7z', 'tar', 'gz'
 }
-
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB
 
@@ -36,10 +33,8 @@ for folder in [UPLOAD_FOLDER, PROFILE_FOLDER, STORY_FOLDER, FILE_FOLDER, AUDIO_F
 os.makedirs(app.instance_path, exist_ok=True)
 
 # ========== قاعدة البيانات ==========
-# استخدم قاعدة البيانات من متغير البيئة إن وجد، وإلا استخدم SQLite محلياً
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-    # Render يقدم postgres://، لكن SQLAlchemy يحتاج postgresql://
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
@@ -48,7 +43,6 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
 
 # ========== تشفير ==========
 key_file = os.path.join(app.instance_path, 'encryption.key')
@@ -120,7 +114,7 @@ class Message(db.Model):
     private_with = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     file_name = db.Column(db.String(200), nullable=True)
     file_path = db.Column(db.String(300), nullable=True)
-    file_type = db.Column(db.String(50), nullable=True)  # image, video, audio, document, file
+    file_type = db.Column(db.String(50), nullable=True)
     deleted_by = db.Column(db.Text, nullable=True)
     pinned = db.Column(db.Boolean, default=False)
     reply_to = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
@@ -151,7 +145,7 @@ class Group(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     group_pic = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.String(50), default='active')  # active, archived, private
+    status = db.Column(db.String(50), default='active')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -187,16 +181,14 @@ class CallLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    call_type = db.Column(db.String(20), nullable=False)  # voice, video
+    call_type = db.Column(db.String(20), nullable=False)
     start_time = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     end_time = db.Column(db.DateTime, nullable=True)
     duration_seconds = db.Column(db.Integer, nullable=True)
-    status = db.Column(db.String(20), default='initiated')  # initiated, accepted, ended, rejected, missed
+    status = db.Column(db.String(20), default='initiated')
 
-# ========== إنشاء الجداول ==========
 with app.app_context():
     db.create_all()
-    # إضافة أعمدة جديدة إذا لم تكن موجودة (للتحديث الآمن)
     try:
         db.session.execute('ALTER TABLE "group" ADD COLUMN description VARCHAR(500)')
     except: pass
@@ -247,7 +239,7 @@ def is_group_admin(user_id, group_id):
     membership = db.session.execute(db.select(GroupMembership).filter_by(user_id=user_id, group_id=group_id)).scalar_one_or_none()
     return membership and membership.is_admin
 
-# ========== مسارات المصادقة الأساسية (نفس السابق، اختصاراً) ==========
+# ========== مسارات المصادقة ==========
 @app.route('/')
 def home():
     return redirect(url_for('dashboard' if 'username' in session else 'login'))
@@ -431,7 +423,7 @@ def reset_password():
         return redirect(url_for('login'))
     return render_template('reset_password.html', username=u)
 
-# ========== مسارات رئيسية ==========
+# ========== المسارات الرئيسية ==========
 @app.route('/dashboard')
 def dashboard():
     user = get_user_by_session()
@@ -487,7 +479,7 @@ def upload_profile_pic():
     flash('تم تحديث الصورة الشخصية','success')
     return redirect(url_for('profile'))
 
-# ========== ستوري ==========
+# ========== الستوري ==========
 @app.route('/story_settings', methods=['GET','POST'])
 def story_settings():
     user = get_user_by_session()
@@ -610,7 +602,6 @@ def group_settings(group_id):
     if not membership.is_admin:
         flash('أنت لست مشرفاً','danger'); return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        # تحديث الاسم والوصف والحالة
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         status = request.form.get('status', 'active')
@@ -621,14 +612,11 @@ def group_settings(group_id):
         db.session.commit()
         flash('تم تحديث إعدادات المجموعة', 'success')
         return redirect(url_for('group_settings', group_id=group.id))
-    # جلب الأعضاء
     members = db.session.execute(
         db.select(User, GroupMembership).join(GroupMembership, GroupMembership.user_id == User.id)
         .filter(GroupMembership.group_id == group.id)
     ).all()
-    admins = [m for m in members if m[1].is_admin]
-    non_admins = [m for m in members if not m[1].is_admin]
-    return render_template('group_settings.html', user=user, group=group, members=members, admins=admins, non_admins=non_admins, is_admin=membership.is_admin)
+    return render_template('group_settings.html', user=user, group=group, members=members, is_admin=membership.is_admin)
 
 @app.route('/upload_group_pic/<int:group_id>', methods=['POST'])
 def upload_group_pic(group_id):
@@ -649,7 +637,7 @@ def upload_group_pic(group_id):
     filename = secure_filename(file.filename)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"group_{group.id}_{timestamp}_{filename}"
-    file_path = os.path.join(PROFILE_FOLDER, unique_filename)  # نستخدم نفس مجلد الصور
+    file_path = os.path.join(PROFILE_FOLDER, unique_filename)
     file.save(file_path)
     if group.group_pic and os.path.exists(os.path.join(PROFILE_FOLDER, group.group_pic)):
         try: os.remove(os.path.join(PROFILE_FOLDER, group.group_pic))
@@ -714,7 +702,7 @@ def group_set_admin(group_id, member_id):
     db.session.commit()
     return jsonify({'success': True, 'message': 'تم تحديث صلاحيات المشرف'})
 
-# ========== رفع الملفات والتسجيلات ==========
+# ========== رفع الملفات (المحسّن) ==========
 @app.route('/upload_file', methods=['POST'])
 def upload_file_general():
     user = get_user_by_session()
@@ -731,7 +719,6 @@ def upload_file_general():
     filename = secure_filename(file.filename)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"{timestamp}_{filename}"
-    # تحديد المجلد حسب نوع الملف
     ftype = file_type(filename)
     if ftype == 'audio':
         folder = AUDIO_FOLDER
@@ -739,10 +726,10 @@ def upload_file_general():
         folder = UPLOAD_FOLDER
     else:
         folder = FILE_FOLDER
+    os.makedirs(folder, exist_ok=True)
     file_path = os.path.join(folder, unique_filename)
     file.save(file_path)
     file_url = url_for('download_file', filename=unique_filename)
-    # إنشاء رسالة
     if ftype == 'image': msg_content = f"🖼️ صورة: {filename}"
     elif ftype == 'video': msg_content = f"🎬 فيديو: {filename}"
     elif ftype == 'audio': msg_content = f"🎵 تسجيل صوتي: {filename}"
@@ -797,7 +784,6 @@ def download_file(filename):
     elif filename.startswith('stories/'):
         return send_from_directory(STORY_FOLDER, filename.replace('stories/', ''))
     else:
-        # البحث في جميع المجلدات
         for folder in [UPLOAD_FOLDER, FILE_FOLDER, AUDIO_FOLDER]:
             if os.path.exists(os.path.join(folder, filename)):
                 return send_from_directory(folder, filename)
@@ -986,6 +972,5 @@ def handle_signal(data):
     if not from_user or not target: return
     emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
 
-# ========== تشغيل التطبيق ==========
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=7070, debug=True, allow_unsafe_werkzeug=True)

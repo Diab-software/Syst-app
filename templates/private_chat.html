@@ -48,36 +48,49 @@ socket.emit('join_private', { user_id: other });
 let peerConnection = null;
 let localStream = null;
 let callActive = false;
-let callType = 'voice'; // 'voice' or 'video'
+let callType = 'voice';
 
-// إشارات WebRTC
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+};
+
 socket.on('signal', async (data) => {
     if (data.from !== other.toString()) return;
-    if (!peerConnection) return;
-    if (data.signal.type === 'offer') {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        socket.emit('signal', { target: data.from, signal: answer });
-    } else if (data.signal.type === 'answer') {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-    } else if (data.signal.type === 'candidate') {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+    if (!peerConnection) {
+        if (data.signal.type === 'offer') {
+            await createPeerConnection(false);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+            callActive = true;
+        }
+        return;
+    }
+    try {
+        if (data.signal.type === 'offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+        } else if (data.signal.type === 'answer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+        } else if (data.signal.type === 'candidate') {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+        } else if (data.signal.type === 'end') {
+            endCall();
+        }
+    } catch (e) {
+        console.error('Signal error:', e);
     }
 });
 
-socket.on('call_ended', () => {
-    endCall();
-});
-
-function startCall(video) {
-    if (callActive) return;
-    callType = video ? 'video' : 'voice';
-    document.getElementById('callWindow').classList.add('active');
-    document.getElementById('callTitle').innerText = video ? 'مكالمة فيديو' : 'مكالمة صوتية';
-    // إعداد WebRTC
-    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    peerConnection = new RTCPeerConnection(config);
+async function createPeerConnection(isInitiator) {
+    peerConnection = new RTCPeerConnection(iceServers);
     peerConnection.onicecandidate = (e) => {
         if (e.candidate) {
             socket.emit('signal', { target: other.toString(), signal: { type: 'candidate', candidate: e.candidate } });
@@ -86,19 +99,27 @@ function startCall(video) {
     peerConnection.ontrack = (e) => {
         document.getElementById('remoteVideo').srcObject = e.streams[0];
     };
-    navigator.mediaDevices.getUserMedia({ audio: true, video: video })
-        .then(stream => {
-            localStream = stream;
-            document.getElementById('localVideo').srcObject = stream;
-            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-            return peerConnection.createOffer();
-        })
-        .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => {
-            socket.emit('signal', { target: other.toString(), signal: peerConnection.localDescription });
+    if (isInitiator) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
+            document.getElementById('localVideo').srcObject = localStream;
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit('signal', { target: other.toString(), signal: offer });
             callActive = true;
-        })
-        .catch(err => alert('فشل بدء المكالمة: ' + err));
+        } catch (e) {
+            alert('فشل بدء المكالمة: ' + e);
+        }
+    }
+}
+
+function startCall(video) {
+    if (callActive) return;
+    callType = video ? 'video' : 'voice';
+    document.getElementById('callWindow').classList.add('active');
+    document.getElementById('callTitle').innerText = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
+    createPeerConnection(true);
 }
 
 function endCall() {
@@ -128,7 +149,7 @@ function toggleVideo() {
     }
 }
 
-// تسجيل صوتي
+// التسجيل الصوتي
 let mediaRecorder = null;
 let audioChunks = [];
 function startRecording() {
@@ -146,9 +167,10 @@ function startRecording() {
                 const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
                 uploadFileDirect(file, null, other);
                 stream.getTracks().forEach(t => t.stop());
+                mediaRecorder = null;
             };
             mediaRecorder.start();
-            alert('🎙️ جارٍ التسجيل... اضغط على زر التسجيل مرة أخرى للإيقاف.');
+            alert('🎙️ جارٍ التسجيل... اضغط مرة أخرى للإيقاف.');
         })
         .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
@@ -167,8 +189,7 @@ function uploadFileDirect(file, group_id, private_with) {
     fetch('/upload_file', { method: 'POST', body: form })
         .then(r => r.json())
         .then(d => {
-            if (d.success) { /* الرسالة ستظهر عبر socket */ }
-            else alert('فشل رفع الملف: '+d.error);
+            if (!d.success) alert('فشل رفع الملف: '+d.error);
         })
         .catch(() => alert('خطأ في الخادم'));
 }
