@@ -21,7 +21,7 @@ AUDIO_FOLDER = 'uploads/audio'
 ALLOWED_EXTENSIONS = {
     'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico',
     'mp4', 'mov', 'avi', 'mkv', 'm4v', '3gp', 'ogv',
-    'mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus',
+    'mp3', 'wav', 'ogg', 'webm', 'oga', 'm4a', 'aac', 'flac', 'opus',
     'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'rtf', 'odt', 'ods', 'odp',
     'zip', 'rar', '7z', 'tar', 'gz'
 }
@@ -224,8 +224,8 @@ def allowed_file(fn):
 def file_type(fn):
     ext = fn.rsplit('.',1)[1].lower()
     if ext in {'png','jpg','jpeg','gif','bmp','webp'}: return 'image'
-    if ext in {'mp4','webm','mov','avi','mkv','m4v','3gp','ogv'}: return 'video'
-    if ext in {'mp3','wav','ogg','webm','oga','m4a','aac','flac'}: return 'audio'
+    if ext in {'mp4','mov','avi','mkv','m4v','3gp','ogv'}: return 'video'
+    if ext in {'mp3','wav','ogg','webm','oga','m4a','aac','flac','opus'}: return 'audio'
     if ext in {'pdf','doc','docx','xls','xlsx','txt','zip','rar','7z'}: return 'document'
     return 'file'
 
@@ -726,6 +726,9 @@ def upload_file_general():
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"{timestamp}_{filename}"
     ftype = file_type(filename)
+    # إذا كان الملف تسجيلاً صوتياً (يبدأ بـ recording_) اعتبره صوتاً
+    if filename.startswith('recording_'):
+        ftype = 'audio'
     if ftype == 'audio':
         folder = AUDIO_FOLDER
     elif ftype in ['image', 'video']:
@@ -968,11 +971,15 @@ def handle_send_message(data):
         'reply_content': reply_content
     }, broadcast=True, room=room)
 
-# ========== إشارات WebRTC (معطلة مؤقتاً) ==========
+# ========== إشارات WebRTC ==========
 @socketio.on('signal')
 def handle_signal(data):
-    # تم تعطيل WebRTC مؤقتاً بسبب تعارضات Python 3.14
-    pass
+    target = data.get('target')
+    signal_data = data.get('signal')
+    video = data.get('video', False)
+    from_user = session.get('username')
+    if not from_user or not target: return
+    emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
