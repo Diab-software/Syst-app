@@ -3,56 +3,17 @@
 {% block nav_title %}خاص{% endblock %}
 {% block extra_head %}
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<audio id="ringtone" preload="auto" style="display:none;">
+    <source src="https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1" type="audio/mpeg">
+</audio>
 <style>
-    .input-area { position: relative; flex-wrap: wrap; }
-    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
-    .icon-btn { background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
-    .icon-btn:hover { background: rgba(0,0,0,0.1); }
-    .call-btn { background: #10B981; color: white; }
-    .call-btn.video { background: #3B82F6; }
-    .emoji-picker {
-        display: none;
-        position: absolute;
-        bottom: 70px;
-        left: 10px;
-        background: white;
-        border-radius: 16px;
-        padding: 12px;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        max-width: 280px;
-        z-index: 50;
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #E5E7EB;
+    .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
+    .msg:hover .msg-actions { opacity: 1; }
+    .msg-actions button {
+        font-size: 11px; padding: 2px 8px; border-radius: 20px;
+        border: none; cursor: pointer; background: rgba(0,0,0,0.05);
     }
-    .emoji-picker.active { display: grid; }
-    .emoji-picker button { border: none; background: none; font-size: 22px; cursor: pointer; padding: 4px; border-radius: 6px; }
-    .emoji-picker button:hover { background: #f3f4f6; }
-    .image-preview-container {
-        display: none;
-        position: relative;
-        background: white;
-        border-radius: 12px;
-        padding: 8px;
-        margin-bottom: 8px;
-        border: 2px solid var(--primary);
-        max-width: 200px;
-    }
-    .image-preview-container.active { display: block; }
-    .image-preview-container img { width: 100%; border-radius: 8px; max-height: 150px; object-fit: cover; }
-    .image-preview-container .remove-preview {
-        position: absolute; top: -8px; right: -8px;
-        background: #EF4444; color: white; border: none;
-        border-radius: 50%; width: 24px; height: 24px;
-        cursor: pointer; font-size: 14px;
-    }
-    .typing-indicator, .recording-indicator {
-        font-size: 13px; color: var(--text-light); margin: 4px 8px; display: none; animation: pulse 1.2s ease-in-out infinite;
-    }
-    .typing-indicator.active, .recording-indicator.active { display: block; }
-    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+    .msg-actions button:hover { background: rgba(0,0,0,0.12); }
 </style>
 {% endblock %}
 
@@ -76,7 +37,7 @@
                 <div class="file-link"><a href="{{ url_for('download_file', filename=msg.file_path.split('/')[-1]) }}" target="_blank">📎 تحميل {{ msg.file_name }}</a></div>
             {% endif %}
         {% endif %}
-        <div class="actions">
+        <div class="msg-actions">
             <button onclick="deleteMsg({{ msg.id }})">🗑️</button>
             <button onclick="pinMsg({{ msg.id }})">📌</button>
         </div>
@@ -84,33 +45,29 @@
     {% endfor %}
 </div>
 
-<!-- مؤشرات -->
 <div class="typing-indicator" id="typingIndicator">✍️ {{ other.display_name }} يكتب...</div>
 <div class="recording-indicator" id="recordingIndicator">🎙️ {{ other.display_name }} يسجل...</div>
 
-<!-- معاينة الصورة -->
 <div class="image-preview-container" id="imagePreview">
     <button class="remove-preview" onclick="removeImagePreview()">✕</button>
     <img id="previewImage" src="">
-    <button onclick="sendImage()" style="background:var(--primary);color:white;border:none;padding:4px 12px;border-radius:30px;margin-top:4px;cursor:pointer;">إرسال الصورة</button>
+    <button onclick="sendImage()" style="background:var(--primary);color:white;border:none;padding:4px 12px;border-radius:30px;margin-top:4px;cursor:pointer;font-size:13px;">إرسال الصورة</button>
 </div>
 
-<!-- منطقة الإدخال -->
-<div class="input-area" style="position:relative;">
+<div class="input-area">
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
     <div class="btn-group">
-        <button onclick="sendMsg()">إرسال</button>
-        <button class="icon-btn" onclick="toggleEmojiPicker()">😊</button>
-        <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-        <button class="icon-btn" onclick="document.getElementById('imageInput').click()">🖼️</button>
-        <button class="icon-btn" onclick="startRecording()">🎤</button>
-        <button class="icon-btn call-btn" onclick="startCall(false)">📞</button>
-        <button class="icon-btn call-btn video" onclick="startCall(true)">📹</button>
+        <button class="send-btn" onclick="sendMsg()" title="إرسال">➤</button>
+        <button onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
+        <button onclick="document.getElementById('fileInput').click()" title="رفع ملف">📎</button>
+        <button onclick="document.getElementById('imageInput').click()" title="رفع صورة">🖼️</button>
+        <button onclick="startRecording()" title="تسجيل صوتي">🎤</button>
+        <button class="call-btn" onclick="startCall(false)" title="مكالمة صوتية">📞</button>
+        <button class="call-btn video" onclick="startCall(true)" title="مكالمة فيديو">📹</button>
     </div>
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
 
-    <!-- منقي الإيموجي -->
     <div class="emoji-picker" id="emojiPicker">
         <button onclick="insertEmoji('😊')">😊</button>
         <button onclick="insertEmoji('😂')">😂</button>
@@ -164,7 +121,6 @@
     </div>
 </div>
 
-<!-- نافذة المكالمة -->
 <div class="call-window" id="callWindow">
     <div class="call-title" id="callTitle">📞 مكالمة</div>
     <div class="call-avatar" id="callAvatar">👤</div>
@@ -188,13 +144,23 @@ const other = {{ other.id }};
 const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
 socket.emit('join_private', { user_id: other });
 
+const ringtone = document.getElementById('ringtone');
+function playRingtone() {
+    ringtone.currentTime = 0;
+    ringtone.loop = true;
+    ringtone.play().catch(e => console.log('Ringtone play failed:', e));
+}
+function stopRingtone() {
+    ringtone.pause();
+    ringtone.currentTime = 0;
+}
+
 let typingTimer = null;
 let isTyping = false;
 let mediaRecorder = null;
 let audioChunks = [];
 let selectedImage = null;
 
-// ===== WebSocket events =====
 socket.on('new_message', function(data) {
     if (data.private_with != other && data.user_id != other) return;
     appendMessage(data);
@@ -222,7 +188,6 @@ socket.on('recording', function(data) {
     }
 });
 
-// ===== دوال الرسائل =====
 function appendMessage(data) {
     const div = document.createElement('div');
     div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
@@ -261,7 +226,6 @@ function pinMsg(id) {
     fetch(`/pin_message/${id}`, {method:'POST'}).then(() => location.reload());
 }
 
-// ===== مؤشر الكتابة =====
 function handleTyping() {
     if (!isTyping) {
         isTyping = true;
@@ -271,7 +235,6 @@ function handleTyping() {
     typingTimer = setTimeout(() => { isTyping = false; }, 2000);
 }
 
-// ===== الإيموجي =====
 function toggleEmojiPicker() {
     document.getElementById('emojiPicker').classList.toggle('active');
 }
@@ -282,7 +245,6 @@ function insertEmoji(emoji) {
     document.getElementById('emojiPicker').classList.remove('active');
 }
 
-// ===== معاينة الصورة =====
 function handleImageSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
@@ -310,12 +272,10 @@ function sendImage() {
     removeImagePreview();
 }
 
-// ===== رفع الملفات =====
 function handleFileSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
     if (file.type.startsWith('image/')) {
-        // معالجة الصور عبر المعاينة
         selectedImage = file;
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -340,7 +300,6 @@ function uploadFileDirect(file, group_id, private_with) {
         .catch(() => alert('خطأ في الخادم'));
 }
 
-// ===== التسجيل الصوتي =====
 function startRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
@@ -370,7 +329,7 @@ function startRecording() {
         .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
 
-// ===== المكالمات (WebRTC) =====
+// ===== المكالمات =====
 let peerConnection = null;
 let localStream = null;
 let callActive = false;
@@ -395,6 +354,7 @@ socket.on('signal', async (data) => {
             socket.emit('signal', { target: data.from, signal: answer });
             callActive = true;
             updateCallUI('connected');
+            stopRingtone();
         }
         return;
     }
@@ -405,9 +365,11 @@ socket.on('signal', async (data) => {
             await peerConnection.setLocalDescription(answer);
             socket.emit('signal', { target: data.from, signal: answer });
             updateCallUI('connected');
+            stopRingtone();
         } else if (data.signal.type === 'answer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
             updateCallUI('connected');
+            stopRingtone();
         } else if (data.signal.type === 'candidate') {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
         } else if (data.signal.type === 'end') {
@@ -436,6 +398,7 @@ async function createPeerConnection(isInitiator) {
             socket.emit('signal', { target: other.toString(), signal: offer });
             callActive = true;
             updateCallUI('connecting');
+            playRingtone();
         } catch (e) {
             alert('فشل بدء المكالمة: ' + e);
         }
@@ -449,7 +412,7 @@ function startCall(video) {
     window.classList.add('active');
     document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
     document.getElementById('callAvatar').textContent = '👤';
-    document.getElementById('callStatus').textContent = 'جارٍ الاتصال...';
+    document.getElementById('callStatus').textContent = '⏳ جارٍ الاتصال...';
     document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
     createPeerConnection(true);
 }
@@ -459,6 +422,7 @@ function updateCallUI(status) {
     if (status === 'connecting') statusEl.textContent = '⏳ جارٍ الاتصال...';
     else if (status === 'connected') statusEl.textContent = '📞 متصل';
     else if (status === 'ended') statusEl.textContent = '🔚 انتهت المكالمة';
+    if (status === 'connected' || status === 'ended') stopRingtone();
 }
 
 function endCall() {
@@ -482,8 +446,6 @@ function toggleVideo() {
         if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
     }
 }
-function toggleSpeaker() {
-    // يمكن تنفيذ تغيير إخراج الصوت إذا أردت
-}
+function toggleSpeaker() {}
 </script>
 {% endblock %}
