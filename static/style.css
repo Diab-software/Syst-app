@@ -1,70 +1,302 @@
+/* ===== الألوان الأساسية ===== */
+:root {
+    --primary: #6C63FF;
+    --primary-dark: #5A52D5;
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-light: #4a5568;
+    --shadow: 0 8px 30px rgba(0,0,0,0.08);
+    --radius: 20px;
+    --radius-sm: 12px;
+}
+
+/* ===== إعادة تعيين ===== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f0f2f5;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
     direction: rtl;
+    min-height: 100vh;
+    line-height: 1.6;
 }
+
+/* ===== الشريط العلوي ===== */
+.navbar {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(108, 99, 255, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.navbar .logo { font-size: 24px; font-weight: 700; }
+.navbar .hamburger {
+    font-size: 28px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.15);
+    padding: 4px 14px;
+    border-radius: 30px;
+}
+.navbar .hamburger:hover { background: rgba(255,255,255,0.25); }
+
+/* ===== حاوية ===== */
+.container {
+    max-width: 960px;
+    margin: 20px auto;
+    padding: 0 16px;
+}
+
+/* ===== صناديق المصادقة ===== */
 .auth-container {
-    max-width: 400px;
+    max-width: 420px;
     margin: 80px auto;
-    background: white;
-    padding: 40px 30px;
-    border-radius: 20px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    background: var(--card);
+    padding: 40px 32px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
     text-align: center;
 }
 .auth-container h1 {
-    font-size: 32px;
-    color: #6C63FF;
+    font-size: 34px;
+    color: var(--primary);
+    margin-bottom: 6px;
 }
 .auth-container .sub {
-    color: #6b7280;
-    margin-bottom: 24px;
+    color: var(--text-light);
+    font-size: 15px;
+    margin-bottom: 28px;
 }
 .auth-container input {
     width: 100%;
-    padding: 12px 16px;
-    margin-bottom: 14px;
-    border: 2px solid #E5E7EB;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border: 2px solid #e2e8f0;
     border-radius: 30px;
     font-size: 15px;
     outline: none;
+    background: #f7fafc;
+    color: var(--text);
 }
 .auth-container input:focus {
-    border-color: #6C63FF;
+    border-color: var(--primary);
+    background: white;
 }
 .auth-container button {
     width: 100%;
-    padding: 12px;
-    background: #6C63FF;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
     border: none;
     border-radius: 30px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 4px 14px rgba(108, 99, 255, 0.35);
 }
 .auth-container button:hover {
-    background: #5A52D5;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(108, 99, 255, 0.45);
 }
 .auth-container .links {
-    margin-top: 18px;
+    margin-top: 22px;
     font-size: 14px;
 }
 .auth-container .links a {
-    color: #6C63FF;
+    color: var(--primary);
     text-decoration: none;
+    font-weight: 500;
 }
-.flash {
-    padding: 10px;
-    border-radius: 10px;
+.auth-container .links a:hover { text-decoration: underline; }
+
+/* ===== بطاقات المحادثات ===== */
+.chat-card {
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     margin-bottom: 12px;
+    cursor: pointer;
+    border: 1px solid #edf2f7;
 }
-.flash.success { background: #D1FAE5; color: #065F46; }
-.flash.danger { background: #FEE2E2; color: #991B1B; }
-.flash.info { background: #DBEAFE; color: #1E40AF; }
-.flash.warning { background: #FEF3C7; color: #92400E; }
+.chat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+.chat-card .info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.chat-card .avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 20px;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+}
+.chat-card .info .name { font-weight: 600; font-size: 16px; color: var(--text); }
+.chat-card .info .username { font-size: 13px; color: var(--text-light); }
+.chat-card button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 6px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.chat-card button:hover { transform: scale(1.05); }
+
+/* ===== الرسائل ===== */
+.messages {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    height: 450px;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.msg {
+    padding: 10px 16px;
+    border-radius: 18px;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.msg .msg-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.msg .user { font-weight: 700; color: var(--primary); }
+.msg .time { font-size: 0.7rem; color: var(--text-light); }
+.msg p { margin-top: 4px; font-size: 15px; }
+.my-msg {
+    background: #d1fae5;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+.other-msg {
+    background: #f3f4f6;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+/* ===== منطقة الإدخال ===== */
+.input-area {
+    display: flex;
+    gap: 10px;
+    background: var(--card);
+    padding: 6px 12px 6px 6px;
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    align-items: center;
+    margin-top: 12px;
+}
+.input-area input {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 30px;
+    font-size: 15px;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+}
+.input-area button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 8px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.input-area button:hover { transform: scale(1.03); }
+
+/* ===== الإعدادات ===== */
+.settings-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 16px;
+    box-shadow: var(--shadow);
+}
+.settings-card h3 { margin-bottom: 16px; font-size: 20px; color: var(--text); }
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #edf2f7;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.settings-item:last-child { border-bottom: none; }
+.settings-card input, .settings-card select {
+    padding: 8px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 30px;
+    outline: none;
+    font-size: 14px;
+    background: #f7fafc;
+    color: var(--text);
+}
+.settings-card button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ===== التحذيرات ===== */
+.flash {
+    padding: 10px 16px;
+    border-radius: 30px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    text-align: right;
+}
+.flash.success { background: #d1fae5; color: #065f46; }
+.flash.danger { background: #fee2e2; color: #991b1b; }
+.flash.info { background: #dbeafe; color: #1e40af; }
+.flash.warning { background: #fef3c7; color: #92400e; }
+
+/* ===== استجابة ===== */
+@media (max-width: 640px) {
+    .auth-container { padding: 28px 16px; margin: 40px 12px; }
+    .msg { max-width: 92%; }
+    .container { padding: 0 10px; }
+}
