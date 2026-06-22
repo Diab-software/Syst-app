@@ -1,6 +1,43 @@
 {% extends "base.html" %}
 {% block title %}القصة - Syst{% endblock %}
 {% block nav_title %}القصة{% endblock %}
+{% block extra_head %}
+<style>
+    .story-actions {
+        margin-top: 16px;
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .story-actions button {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .story-actions .delete-btn {
+        background: #EF4444;
+        color: white;
+    }
+    .story-actions .delete-btn:hover {
+        background: #DC2626;
+        transform: scale(1.05);
+    }
+    .story-actions .back-btn {
+        background: var(--primary);
+        color: white;
+    }
+    .story-actions .back-btn:hover {
+        background: var(--primary-dark);
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div style="text-align:center;padding:20px;">
     {% if story.media_type == 'image' %}
@@ -14,5 +51,29 @@
     {% endif %}
     <div style="margin-top:12px;font-size:16px;color:var(--text-light);">📝 {{ story.caption }}</div>
     <div style="color:#888;margin-top:8px;font-size:14px;">من {{ story.user.display_name }}</div>
+
+    <div class="story-actions">
+        <button class="back-btn" onclick="window.location.href='/dashboard'">⬅️ رجوع</button>
+        {% if story.user_id == user.id %}
+        <button class="delete-btn" onclick="deleteStory({{ story.id }})">🗑️ حذف القصة</button>
+        {% endif %}
+    </div>
 </div>
+
+<script>
+function deleteStory(storyId) {
+    if (!confirm('⚠️ هل أنت متأكد من حذف هذه القصة؟')) return;
+    fetch(`/delete_story/${storyId}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('✅ تم حذف القصة');
+                window.location.href = '/dashboard';
+            } else {
+                alert('❌ ' + d.error);
+            }
+        })
+        .catch(() => alert('❌ خطأ في الخادم'));
+}
+</script>
 {% endblock %}

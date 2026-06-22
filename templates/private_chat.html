@@ -462,6 +462,7 @@ function updateCallUI(status) {
 }
 
 function endCall() {
+    stopRingtone();
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     callActive = false;

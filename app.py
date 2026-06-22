@@ -540,22 +540,6 @@ def upload_story():
         flash('تم نشر القصة', 'success')
         return redirect(url_for('dashboard'))
 
-@app.route('/story/<int:story_id>')
-def view_story(story_id):
-    user = get_user_by_session()
-    if not user: return redirect(url_for('login'))
-    story = db.session.get(Story, story_id)
-    if not story: flash('القصة غير موجودة', 'danger'); return redirect(url_for('dashboard'))
-    if story.expires_at.tzinfo is None:
-        expires_at = story.expires_at.replace(tzinfo=timezone.utc)
-    else:
-        expires_at = story.expires_at
-    if expires_at < datetime.now(timezone.utc):
-        flash('انتهت صلاحية القصة', 'info')
-        return redirect(url_for('dashboard'))
-    if story.user_id != user.id and user.is_blocked(story.user_id):
-        flash('لا يمكنك رؤية هذه القصة', 'danger'); return redirect(url_for('dashboard'))
-    return render_template('view_story.html', story=story)
 
 @app.route('/chat/private/<int:user_id>')
 def private_chat(user_id):
@@ -975,3 +959,21 @@ def handle_signal(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
+
+@app.route('/delete_story/<int:story_id>', methods=['POST'])
+def delete_story(story_id):
+    user = get_user_by_session()
+    if not user: return jsonify({'error': 'غير مسجل'}), 401
+    story = db.session.get(Story, story_id)
+    if not story: return jsonify({'error': 'القصة غير موجودة'}), 404
+    if story.user_id != user.id:
+        return jsonify({'error': 'غير مصرح'}), 403
+    # حذف الملف إن وجد
+    if story.media_path:
+        try:
+            os.remove(os.path.join(STORY_FOLDER, story.media_path))
+        except:
+            pass
+    db.session.delete(story)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'تم حذف القصة'})
