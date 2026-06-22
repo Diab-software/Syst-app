@@ -10,7 +10,7 @@ import pyotp, qrcode
 from io import BytesIO
 
 app = Flask(__name__)
-app.secret_key = 'syst-ultimate-secret-key-v2'
+app.secret_key = os.environ.get('SECRET_KEY', 'syst-ultimate-secret-key-v2')
 
 # ========== الإعدادات ==========
 UPLOAD_FOLDER = 'uploads'
@@ -26,7 +26,7 @@ ALLOWED_EXTENSIONS = {
     'zip', 'rar', '7z', 'tar', 'gz'
 }
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
 
 for folder in [UPLOAD_FOLDER, PROFILE_FOLDER, STORY_FOLDER, FILE_FOLDER, AUDIO_FOLDER]:
     os.makedirs(folder, exist_ok=True)
@@ -42,7 +42,7 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ========== تشفير ==========
 key_file = os.path.join(app.instance_path, 'encryption.key')
@@ -58,7 +58,7 @@ def decrypt(t):
     try: return cipher.decrypt(t.encode()).decode() if t else t
     except: return "[مشفر]"
 
-# ========== نماذج ==========
+# ========== نماذج قاعدة البيانات ==========
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -702,7 +702,7 @@ def group_set_admin(group_id, member_id):
     db.session.commit()
     return jsonify({'success': True, 'message': 'تم تحديث صلاحيات المشرف'})
 
-# ========== رفع الملفات (المحسّن) ==========
+# ========== رفع الملفات ==========
 @app.route('/upload_file', methods=['POST'])
 def upload_file_general():
     user = get_user_by_session()
@@ -962,15 +962,12 @@ def handle_send_message(data):
         'reply_content': reply_content
     }, broadcast=True, room=room)
 
-# ========== إشارات WebRTC ==========
+# ========== إشارات WebRTC (معطلة مؤقتاً) ==========
 @socketio.on('signal')
 def handle_signal(data):
-    target = data.get('target')
-    signal_data = data.get('signal')
-    video = data.get('video', False)
-    from_user = session.get('username')
-    if not from_user or not target: return
-    emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
+    # تم تعطيل WebRTC مؤقتاً بسبب تعارضات Python 3.14
+    pass
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=7070, debug=True, allow_unsafe_werkzeug=True)
+    port = int(os.environ.get('PORT', 7070))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
