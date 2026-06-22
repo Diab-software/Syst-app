@@ -20,7 +20,7 @@ FILE_FOLDER = 'uploads/files'
 AUDIO_FOLDER = 'uploads/audio'
 ALLOWED_EXTENSIONS = {
     'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico',
-    'mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', '3gp', 'ogv',
+    'mp4', 'mov', 'avi', 'mkv', 'm4v', '3gp', 'ogv',
     'mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus',
     'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'rtf', 'odt', 'ods', 'odp',
     'zip', 'rar', '7z', 'tar', 'gz'
@@ -224,8 +224,8 @@ def allowed_file(fn):
 def file_type(fn):
     ext = fn.rsplit('.',1)[1].lower()
     if ext in {'png','jpg','jpeg','gif','bmp','webp'}: return 'image'
-    if ext in {.mp4.,.mov.,.avi.,.mkv.,.m4v.,.3gp.,.ogv.}: return .video.
-    if ext in {.mp3.,.wav.,.ogg.,.webm.,.oga.,.m4a.,.aac.,.flac.}: return .audio.
+    if ext in {'mp4','webm','mov','avi','mkv','m4v','3gp','ogv'}: return 'video'
+    if ext in {'mp3','wav','ogg','webm','oga','m4a','aac','flac'}: return 'audio'
     if ext in {'pdf','doc','docx','xls','xlsx','txt','zip','rar','7z'}: return 'document'
     return 'file'
 
@@ -710,6 +710,9 @@ def group_set_admin(group_id, member_id):
 
 # ========== رفع الملفات ==========
 @app.route('/upload_file', methods=['POST'])
+def upload_file_general():
+    user = get_user_by_session()
+    if not user: return jsonify({'error': 'غير مسجل'}), 401
     private_with = request.form.get('private_with', type=int)
     group_id = request.form.get('group_id', type=int)
     if 'file' not in request.files:
@@ -974,54 +977,3 @@ def handle_signal(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
-
-# تصحيح إضافي: إذا كان الملف يبدأ بـ recording_ اعتبره صوتاً حتى لو امتداده webm
-@app.route('/upload_file', methods=['POST'])
-def upload_file_general():
-    user = get_user_by_session()
-    if not user: return jsonify({'error': 'غير مسجل'}), 401
-    private_with = request.form.get('private_with', type=int)
-    group_id = request.form.get('group_id', type=int)
-    if 'file' not in request.files:
-        return jsonify({'error': 'لا يوجد ملف'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'لم يتم اختيار ملف'}), 400
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'نوع الملف غير مسموح'}), 400
-    filename = secure_filename(file.filename)
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
-    unique_filename = f"{timestamp}_{filename}"
-    ftype = file_type(filename)
-    # إذا كان الملف تسجيلاً صوتياً (يبدأ بـ recording_) اعتبره صوتاً
-    if filename.startswith('recording_'):
-        ftype = 'audio'
-    if ftype == 'audio':
-        folder = AUDIO_FOLDER
-    elif ftype in ['image', 'video']:
-        folder = UPLOAD_FOLDER
-    else:
-        folder = FILE_FOLDER
-    os.makedirs(folder, exist_ok=True)
-    file_path = os.path.join(folder, unique_filename)
-    file.save(file_path)
-    file_url = url_for('download_file', filename=unique_filename)
-    if ftype == 'image': msg_content = f"🖼️ صورة: {filename}"
-    elif ftype == 'video': msg_content = f"🎬 فيديو: {filename}"
-    elif ftype == 'audio': msg_content = f"🎵 تسجيل صوتي: {filename}"
-    else: msg_content = f"📎 ملف: {filename} (حجم: {os.path.getsize(file_path)//1024} كيلوبايت)"
-    msg = Message(content=msg_content, user_id=user.id, file_name=filename, file_path=file_path, file_type=ftype,
-                  private_with=private_with, group_id=group_id)
-    db.session.add(msg); db.session.commit()
-    room = None
-    if private_with:
-        room = f"private_{min(user.id, private_with)}_{max(user.id, private_with)}"
-    elif group_id:
-        room = f"group_{group_id}"
-    if room:
-        socketio.emit('new_message', {
-            'username': user.username, 'display_name': user.display_name, 'content': msg.content,
-            'timestamp': msg.timestamp.strftime('%H:%M'), 'file_name': filename, 'file_url': file_url,
-            'file_type': ftype, 'private_with': private_with, 'group_id': group_id, 'message_id': msg.id
-        }, namespace='/', room=room)
-    return jsonify({'success': True, 'message': 'تم رفع الملف'})
