@@ -1,1 +1,85 @@
-{% extends 'dashboard.html' %}
+{% extends "base.html" %}
+{% block title %}الإعدادات - Syst{% endblock %}
+{% block nav_title %}الإعدادات{% endblock %}
+
+{% block content %}
+<div class="settings-card">
+    <h3>🔒 الخصوصية</h3>
+    <form method="post">
+        <div class="settings-item">
+            <span>من يمكنه رؤية آخر ظهور</span>
+            <select name="privacy_last_seen">
+                <option value="everyone" {% if user.privacy_last_seen=='everyone' %}selected{% endif %}>الجميع</option>
+                <option value="contacts" {% if user.privacy_last_seen=='contacts' %}selected{% endif %}>جهات الاتصال</option>
+                <option value="nobody" {% if user.privacy_last_seen=='nobody' %}selected{% endif %}>لا أحد</option>
+            </select>
+        </div>
+        <div class="settings-item">
+            <span>من يمكنه رؤية أنني متصل</span>
+            <select name="privacy_online">
+                <option value="everyone" {% if user.privacy_online=='everyone' %}selected{% endif %}>الجميع</option>
+                <option value="contacts" {% if user.privacy_online=='contacts' %}selected{% endif %}>جهات الاتصال</option>
+                <option value="nobody" {% if user.privacy_online=='nobody' %}selected{% endif %}>لا أحد</option>
+            </select>
+        </div>
+        <button type="submit">حفظ</button>
+    </form>
+</div>
+
+<div class="settings-card">
+    <h3>🚫 المحظورون</h3>
+    {% if blocked_users %}
+        {% for bu in blocked_users %}
+        <div class="settings-item">
+            <span>{{ bu.display_name }} (@{{ bu.username }})</span>
+            <button onclick="unblockUser({{ bu.id }}, '{{ bu.display_name }}')" style="background:#EF4444;">إلغاء الحظر</button>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:var(--text-light);">لا يوجد محظورون</p>
+    {% endif %}
+</div>
+
+<div class="settings-card">
+    <h3>📁 المجموعات</h3>
+    <div class="settings-item">
+        <span>إنشاء مجموعة</span>
+        <form action="/create_group" method="post" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" name="name" placeholder="اسم المجموعة" required>
+            <input type="text" name="description" placeholder="الوصف (اختياري)">
+            <button type="submit">إنشاء</button>
+        </form>
+    </div>
+    <div class="settings-item">
+        <span>الانضمام إلى مجموعة</span>
+        <form action="/join_group" method="post" style="display:flex;gap:10px;">
+            <input type="number" name="group_id" placeholder="المعرف">
+            <button type="submit">انضمام</button>
+        </form>
+    </div>
+</div>
+
+<div class="settings-card" style="border:1px solid #EF4444;">
+    <h3 style="color:#EF4444;">⚠️ منطقة خطرة</h3>
+    <div class="settings-item">
+        <span>حذف الحساب</span>
+        <button onclick="deleteAccount()" style="background:#EF4444;">🗑️ حذف الحساب</button>
+    </div>
+</div>
+
+<script>
+function deleteAccount(){
+    if(!confirm('⚠️ هل أنت متأكد من حذف حسابك؟')) return;
+    fetch('/delete_account',{method:'POST'})
+        .then(r=>r.json())
+        .then(d=>{if(d.success){alert('✅ تم حذف حسابك');window.location.href='/login'}else alert('❌ '+d.error)})
+        .catch(()=>alert('❌ خطأ في الخادم'));
+}
+function unblockUser(id,name){
+    if(!confirm(`هل تريد إلغاء حظر ${name}؟`)) return;
+    fetch(`/unblock_user/${id}`,{method:'POST'})
+        .then(r=>r.json())
+        .then(d=>{if(d.success){alert('✅ '+d.message);location.reload()}else alert('❌ '+d.error)});
+}
+</script>
+{% endblock %}

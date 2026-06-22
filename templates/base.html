@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Syst{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">💬 Syst <span>{% block nav_title %}دردشة{% endblock %}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-weight:500;">{{ user.display_name if user else '' }}</span>
+        <div class="hamburger" onclick="toggleSidebar()">☰</div>
+    </div>
+</nav>
+
+<!-- القائمة الجانبية -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button class="close-btn" onclick="toggleSidebar()">✕</button>
+    </div>
+    <div class="user-info">
+        {% if user and user.profile_pic %}
+        <div class="avatar" style="background-image:url({{ url_for('download_file', filename='profiles/'+user.profile_pic) }});"></div>
+        {% elif user %}
+        <div class="avatar" style="background:var(--primary);">{{ user.display_name[0]|upper }}</div>
+        {% else %}
+        <div class="avatar" style="background:var(--primary);">?</div>
+        {% endif %}
+        <div class="name">{{ user.display_name if user else 'زائر' }}</div>
+        <div class="username">@{{ user.username if user else 'guest' }}</div>
+    </div>
+    <div class="menu-items">
+        <a class="menu-item" href="/profile"><span class="icon">👤</span> الملف الشخصي</a>
+        <a class="menu-item" href="/search"><span class="icon">🔍</span> بحث</a>
+        <a class="menu-item" href="/settings"><span class="icon">⚙️</span> الإعدادات</a>
+        <a class="menu-item" href="/story_settings"><span class="icon">📖</span> إعدادات الستوري</a>
+        <a class="menu-item" href="/call_log"><span class="icon">📋</span> سجل المكالمات</a>
+        <a class="menu-item logout" href="/logout"><span class="icon">🚪</span> خروج</a>
+    </div>
+</div>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.toggle('open');
+    }
+    document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById('sidebar');
+        const hamburger = document.querySelector('.hamburger');
+        if (sidebar && sidebar.classList.contains('open')) {
+            if (!sidebar.contains(event.target) && !hamburger.contains(event.target)) {
+                sidebar.classList.remove('open');
+            }
+        }
+    });
+    {% block extra_js %}{% endblock %}
+</script>
+</body>
+</html>
