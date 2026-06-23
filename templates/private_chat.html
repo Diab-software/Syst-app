@@ -15,6 +15,123 @@
     }
     .msg-actions button:hover { background: rgba(0,0,0,0.12); }
     .input-area { position: relative; }
+    .attach-menu {
+        display: none;
+        position: absolute;
+        bottom: 70px;
+        left: 10px;
+        background: white;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        z-index: 60;
+        border: 1px solid #e5e7eb;
+        min-width: 160px;
+    }
+    .attach-menu.active { display: block; }
+    .attach-menu .attach-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+        color: #1a1a2e;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .attach-menu .attach-item:hover { background: #f3f4f6; }
+    .attach-menu .attach-item .icon { font-size: 22px; width: 30px; text-align: center; }
+    .input-area .btn-group .icon-btn {
+        width: 42px; height: 42px;
+        border: none; border-radius: 50%;
+        background: transparent;
+        color: #4a5568;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .input-area .btn-group .icon-btn:hover {
+        background: #eef2f7;
+        transform: translateY(-2px);
+    }
+    .input-area .btn-group .send-btn {
+        background: linear-gradient(135deg, #6C63FF, #5A52D5);
+        color: white;
+        width: 46px; height: 46px;
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 4px 14px rgba(108,99,255,0.35);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    .input-area .btn-group .send-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 28px rgba(108,99,255,0.45);
+    }
+    .typing-indicator, .recording-indicator {
+        font-size: 13px;
+        color: var(--text-light);
+        margin: 4px 8px;
+        display: none;
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+    .typing-indicator.active, .recording-indicator.active { display: block; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+    .image-preview-container {
+        display: none;
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        padding: 8px;
+        margin-bottom: 8px;
+        border: 2px solid var(--primary);
+        max-width: 200px;
+    }
+    .image-preview-container.active { display: block; }
+    .image-preview-container img { width: 100%; border-radius: 8px; max-height: 150px; object-fit: cover; }
+    .image-preview-container .remove-preview {
+        position: absolute; top: -8px; right: -8px;
+        background: #EF4444; color: white; border: none;
+        border-radius: 50%; width: 24px; height: 24px;
+        cursor: pointer; font-size: 14px;
+    }
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        bottom: 70px;
+        left: 10px;
+        background: white;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        max-width: 280px;
+        z-index: 50;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #E5E7EB;
+    }
+    .emoji-picker.active { display: grid; }
+    .emoji-picker button {
+        border: none; background: none; font-size: 22px;
+        cursor: pointer; padding: 4px; border-radius: 6px;
+    }
+    .emoji-picker button:hover { background: #f3f4f6; }
+    @media (max-width: 640px) {
+        .input-area .btn-group .icon-btn { width: 36px; height: 36px; font-size: 15px; }
+        .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; }
+        .attach-menu { min-width: 140px; left: 0; right: 0; margin: 0 auto; }
+    }
 </style>
 {% endblock %}
 
@@ -67,21 +184,16 @@
     <button onclick="sendImage()" style="background:var(--primary);color:white;border:none;padding:4px 12px;border-radius:30px;margin-top:4px;cursor:pointer;font-size:13px;">إرسال الصورة</button>
 </div>
 
-<!-- ===== شريط الإدخال السفلي (مع زر مرفقات موحد) ===== -->
+<!-- ===== شريط الإدخال ===== -->
 <div class="input-area" style="position:relative;">
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
     <div class="btn-group">
-        <!-- زر الإرسال -->
         <button class="send-btn" onclick="sendMsg()" title="إرسال">➤</button>
-        <!-- زر الإيموجي -->
         <button class="icon-btn" onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
-        <!-- زر المرفقات الموحد (يفتح قائمة منبثقة) -->
         <button class="icon-btn" onclick="toggleAttachMenu()" title="رفع مرفق">📎</button>
-        <!-- زر التسجيل الصوتي -->
         <button class="icon-btn" onclick="startRecording()" title="تسجيل صوتي">🎤</button>
     </div>
-
-    <!-- قائمة المرفقات المنبثقة -->
+    <!-- قائمة المرفقات -->
     <div class="attach-menu" id="attachMenu">
         <div class="attach-item" onclick="triggerFileInput('fileInput')">
             <span class="icon">📎</span> رفع ملف
@@ -90,13 +202,10 @@
             <span class="icon">🖼️</span> رفع صورة
         </div>
     </div>
-
-    <!-- مدخلات الملفات المخفية -->
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
-
-    <!-- منقي الإيموجي -->
     <div class="emoji-picker" id="emojiPicker">
+        <!-- إيموجي (مختصر) -->
         <button onclick="insertEmoji('😊')">😊</button>
         <button onclick="insertEmoji('😂')">😂</button>
         <button onclick="insertEmoji('🤣')">🤣</button>
@@ -149,25 +258,29 @@
     </div>
 </div>
 
-<!-- ===== نافذة المكالمة (تصميم عصري) ===== -->
+<!-- ===== نافذة المكالمة العصرية ===== -->
 <div class="call-window" id="callWindow">
+    <div class="call-avatar pulse" id="callAvatar">👤</div>
     <div class="call-title" id="callTitle">📞 مكالمة</div>
-    <div class="call-avatar" id="callAvatar">👤</div>
-    <div class="call-status" id="callStatus">جارٍ الاتصال...</div>
+    <div class="call-status" id="callStatus">
+        <span class="ringing-indicator" id="ringingIndicator"></span>
+        <span id="callStatusText">جارٍ الاتصال...</span>
+        <span class="timer" id="callTimer"></span>
+    </div>
     <div class="video-grid" id="videoGrid">
         <video id="localVideo" autoplay muted style="width:100%;border-radius:12px;background:#0a0a1a;"></video>
         <video id="remoteVideo" autoplay style="width:100%;border-radius:12px;background:#0a0a1a;"></video>
     </div>
     <div class="call-controls">
-        <button class="end" onclick="endCall()">إنهاء</button>
+        <button class="end" onclick="endCall()">📞 إنهاء</button>
         <button class="mute" onclick="toggleMute()">🔇 كتم</button>
         <button class="video-toggle" onclick="toggleVideo()">📹 فيديو</button>
-        <button class="mute" onclick="toggleSpeaker()">🔊 سماعة</button>
+        <button class="speaker" onclick="toggleSpeaker()">🔊 سماعة</button>
     </div>
 </div>
 
 <script>
-// ===== جميع دوال JavaScript =====
+// ===== دوال JavaScript (مع تحسينات المكالمات) =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
@@ -179,10 +292,14 @@ function playRingtone() {
     ringtone.currentTime = 0;
     ringtone.loop = true;
     ringtone.play().catch(e => console.log('Ringtone play failed:', e));
+    // إظهار مؤشر الرنين
+    document.getElementById('ringingIndicator').style.display = 'inline-block';
+    document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
 }
 function stopRingtone() {
     ringtone.pause();
     ringtone.currentTime = 0;
+    document.getElementById('ringingIndicator').style.display = 'none';
 }
 
 let typingTimer = null;
@@ -191,6 +308,167 @@ let mediaRecorder = null;
 let audioChunks = [];
 let selectedImage = null;
 
+// ===== دوال المكالمات =====
+let peerConnection = null;
+let localStream = null;
+let callActive = false;
+let callType = 'voice';
+let callTimerInterval = null;
+let callStartTime = null;
+
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+};
+
+socket.on('signal', async (data) => {
+    if (data.from !== other.toString()) return;
+    if (!peerConnection) {
+        if (data.signal.type === 'offer') {
+            await createPeerConnection(false);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+            callActive = true;
+            updateCallUI('connected');
+            stopRingtone();
+            startCallTimer();
+        }
+        return;
+    }
+    try {
+        if (data.signal.type === 'offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('signal', { target: data.from, signal: answer });
+            updateCallUI('connected');
+            stopRingtone();
+            startCallTimer();
+        } else if (data.signal.type === 'answer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            updateCallUI('connected');
+            stopRingtone();
+            startCallTimer();
+        } else if (data.signal.type === 'candidate') {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+        } else if (data.signal.type === 'end') {
+            endCall();
+        }
+    } catch (e) { console.error('Signal error:', e); }
+});
+
+async function createPeerConnection(isInitiator) {
+    peerConnection = new RTCPeerConnection(iceServers);
+    peerConnection.onicecandidate = (e) => {
+        if (e.candidate) {
+            socket.emit('signal', { target: other.toString(), signal: { type: 'candidate', candidate: e.candidate } });
+        }
+    };
+    peerConnection.ontrack = (e) => {
+        document.getElementById('remoteVideo').srcObject = e.streams[0];
+    };
+    if (isInitiator) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
+            document.getElementById('localVideo').srcObject = localStream;
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit('signal', { target: other.toString(), signal: offer });
+            callActive = true;
+            updateCallUI('connecting');
+            playRingtone();
+        } catch (e) {
+            alert('فشل بدء المكالمة: ' + e);
+            endCall();
+        }
+    }
+}
+
+function startCall(video) {
+    if (callActive) return;
+    callType = video ? 'video' : 'voice';
+    const window = document.getElementById('callWindow');
+    window.classList.add('active');
+    document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
+    document.getElementById('callAvatar').textContent = '👤';
+    document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
+    // إظهار مؤشر الرنين
+    document.getElementById('ringingIndicator').style.display = 'inline-block';
+    document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
+    document.getElementById('callTimer').textContent = '';
+    createPeerConnection(true);
+}
+
+function updateCallUI(status) {
+    const statusText = document.getElementById('callStatusText');
+    if (status === 'connecting') {
+        statusText.textContent = '⏳ جارٍ الاتصال...';
+        document.getElementById('ringingIndicator').style.display = 'inline-block';
+    } else if (status === 'connected') {
+        statusText.textContent = '📞 متصل';
+        document.getElementById('ringingIndicator').style.display = 'none';
+        document.getElementById('callAvatar').classList.remove('pulse');
+    } else if (status === 'ended') {
+        statusText.textContent = '🔚 انتهت المكالمة';
+        document.getElementById('ringingIndicator').style.display = 'none';
+        document.getElementById('callAvatar').classList.remove('pulse');
+    }
+    if (status === 'connected' || status === 'ended') {
+        stopRingtone();
+        stopCallTimer();
+    }
+}
+
+function startCallTimer() {
+    callStartTime = Date.now();
+    clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const secs = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('callTimer').textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+function stopCallTimer() {
+    clearInterval(callTimerInterval);
+    document.getElementById('callTimer').textContent = '';
+}
+
+function endCall() {
+    stopRingtone();
+    stopCallTimer();
+    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    callActive = false;
+    document.getElementById('callWindow').classList.remove('active');
+    document.getElementById('callAvatar').classList.add('pulse');
+    socket.emit('signal', { target: other.toString(), signal: { type: 'end' } });
+}
+
+function toggleMute() {
+    if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
+    }
+}
+function toggleVideo() {
+    if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
+    }
+}
+function toggleSpeaker() {
+    // تغيير إخراج الصوت (يمكن تنفيذها لاحقاً)
+    alert('🔊 سيتم تفعيل وضع السماعة الخارجية (قيد التطوير)');
+}
+
+// ===== دوال الرسائل والإيموجي والمرفقات (نفس السابق) =====
 socket.on('new_message', function(data) {
     if (data.private_with != other && data.user_id != other) return;
     appendMessage(data);
@@ -368,124 +646,5 @@ function startRecording() {
         })
         .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
-
-// ===== دوال المكالمات (WebRTC) =====
-let peerConnection = null;
-let localStream = null;
-let callActive = false;
-let callType = 'voice';
-
-const iceServers = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
-    ]
-};
-
-socket.on('signal', async (data) => {
-    if (data.from !== other.toString()) return;
-    if (!peerConnection) {
-        if (data.signal.type === 'offer') {
-            await createPeerConnection(false);
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('signal', { target: data.from, signal: answer });
-            callActive = true;
-            updateCallUI('connected');
-            stopRingtone();
-        }
-        return;
-    }
-    try {
-        if (data.signal.type === 'offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('signal', { target: data.from, signal: answer });
-            updateCallUI('connected');
-            stopRingtone();
-        } else if (data.signal.type === 'answer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            updateCallUI('connected');
-            stopRingtone();
-        } else if (data.signal.type === 'candidate') {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
-        } else if (data.signal.type === 'end') {
-            endCall();
-        }
-    } catch (e) { console.error('Signal error:', e); }
-});
-
-async function createPeerConnection(isInitiator) {
-    peerConnection = new RTCPeerConnection(iceServers);
-    peerConnection.onicecandidate = (e) => {
-        if (e.candidate) {
-            socket.emit('signal', { target: other.toString(), signal: { type: 'candidate', candidate: e.candidate } });
-        }
-    };
-    peerConnection.ontrack = (e) => {
-        document.getElementById('remoteVideo').srcObject = e.streams[0];
-    };
-    if (isInitiator) {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
-            document.getElementById('localVideo').srcObject = localStream;
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit('signal', { target: other.toString(), signal: offer });
-            callActive = true;
-            updateCallUI('connecting');
-            playRingtone();
-        } catch (e) {
-            alert('فشل بدء المكالمة: ' + e);
-        }
-    }
-}
-
-function startCall(video) {
-    if (callActive) return;
-    callType = video ? 'video' : 'voice';
-    const window = document.getElementById('callWindow');
-    window.classList.add('active');
-    document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
-    document.getElementById('callAvatar').textContent = '👤';
-    document.getElementById('callStatus').textContent = '⏳ جارٍ الاتصال...';
-    document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
-    createPeerConnection(true);
-}
-
-function updateCallUI(status) {
-    const statusEl = document.getElementById('callStatus');
-    if (status === 'connecting') statusEl.textContent = '⏳ جارٍ الاتصال...';
-    else if (status === 'connected') statusEl.textContent = '📞 متصل';
-    else if (status === 'ended') statusEl.textContent = '🔚 انتهت المكالمة';
-    if (status === 'connected' || status === 'ended') stopRingtone();
-}
-
-function endCall() {
-    stopRingtone();
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-    callActive = false;
-    document.getElementById('callWindow').classList.remove('active');
-    socket.emit('signal', { target: other.toString(), signal: { type: 'end' } });
-}
-
-function toggleMute() {
-    if (localStream) {
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
-    }
-}
-function toggleVideo() {
-    if (localStream) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
-    }
-}
-function toggleSpeaker() {}
 </script>
 {% endblock %}

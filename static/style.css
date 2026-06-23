@@ -737,3 +737,228 @@ body {
         font-size: 15px;
     }
 }
+
+/* ===== نافذة المكالمة (تصميم عصري) ===== */
+.call-window {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    padding: 32px 28px;
+    border-radius: 32px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    z-index: 3000;
+    width: 92%;
+    max-width: 440px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+    pointer-events: none;
+}
+.call-window.active {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+.call-window .call-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6C63FF, #5A52D5);
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    color: white;
+    border: 3px solid rgba(255,255,255,0.15);
+    box-shadow: 0 12px 30px rgba(108, 99, 255, 0.3);
+    transition: transform 0.3s ease;
+}
+.call-window .call-avatar.pulse {
+    animation: avatarPulse 1.2s ease-in-out infinite;
+}
+@keyframes avatarPulse {
+    0% { transform: scale(1); box-shadow: 0 12px 30px rgba(108, 99, 255, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(108, 99, 255, 0.5); }
+    100% { transform: scale(1); box-shadow: 0 12px 30px rgba(108, 99, 255, 0.3); }
+}
+.call-window .call-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+}
+.call-window .call-status {
+    color: #aab;
+    font-size: 16px;
+    margin-bottom: 20px;
+    font-weight: 400;
+}
+.call-window .call-status .timer {
+    font-weight: 600;
+    color: #6C63FF;
+}
+.call-window .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0a0a1a;
+}
+.call-window .video-grid video {
+    width: 100%;
+    background: #0a0a1a;
+    display: block;
+    border-radius: 12px;
+}
+.call-window .call-controls {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.call-window .call-controls button {
+    padding: 14px 24px;
+    border-radius: 40px;
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 80px;
+    justify-content: center;
+}
+.call-window .call-controls button:hover {
+    transform: translateY(-4px);
+}
+.call-window .call-controls button:active {
+    transform: scale(0.92);
+}
+.call-window .call-controls .end {
+    background: #EF4444;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+.call-window .call-controls .mute {
+    background: #F59E0B;
+    color: #1a1a2e;
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+.call-window .call-controls .video-toggle {
+    background: #6C63FF;
+    box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
+}
+.call-window .call-controls .accept {
+    background: #10B981;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+.call-window .call-controls .reject {
+    background: #EF4444;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+.call-window .call-controls .speaker {
+    background: #8B5CF6;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* ===== شريط المكالمات العلوي ===== */
+.call-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: white;
+    border-radius: 40px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.call-bar .call-label {
+    font-size: 13px;
+    color: var(--text-light);
+    font-weight: 500;
+}
+.call-bar .call-buttons {
+    display: flex;
+    gap: 6px;
+}
+.call-bar .call-btn-top {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.call-bar .call-btn-top.voice {
+    background: #10B981;
+    color: white;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+}
+.call-bar .call-btn-top.video {
+    background: #3B82F6;
+    color: white;
+    box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+}
+.call-bar .call-btn-top:hover {
+    transform: translateY(-2px) scale(1.05);
+}
+.call-bar .call-btn-top:active {
+    transform: scale(0.92);
+}
+
+/* ===== نغمة الرنين (مؤقتاً) ===== */
+.call-window .ringing-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background: #10B981;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: ringPulse 0.8s ease-in-out infinite;
+}
+@keyframes ringPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== استجابة ===== */
+@media (max-width: 640px) {
+    .call-window {
+        padding: 24px 16px;
+        border-radius: 24px;
+        max-width: 95%;
+    }
+    .call-window .call-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 36px;
+    }
+    .call-window .call-title {
+        font-size: 20px;
+    }
+    .call-window .call-controls button {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-width: 60px;
+    }
+    .call-window .video-grid {
+        grid-template-columns: 1fr;
+    }
+}
