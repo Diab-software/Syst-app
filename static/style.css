@@ -557,3 +557,87 @@ body {
     .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; }
     .attach-menu, .emoji-picker { min-width: 140px; left: 0; right: 0; margin: 0 auto; }
 }
+
+/* ===== زر تبديل الوضع الليلي (تصميم عصري) ===== */
+.theme-toggle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+.theme-toggle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+.theme-toggle:hover {
+    transform: scale(1.08) rotate(8deg);
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 4px 20px rgba(108,99,255,0.3);
+}
+.theme-toggle:hover::before {
+    opacity: 1;
+}
+.theme-toggle:active {
+    transform: scale(0.92) rotate(-4deg);
+}
+.theme-toggle .icon {
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: inline-block;
+}
+.theme-toggle .icon.sun {
+    transform: rotate(0deg) scale(1);
+}
+.theme-toggle .icon.moon {
+    transform: rotate(360deg) scale(1);
+}
+[data-theme="dark"] .theme-toggle {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+}
+[data-theme="dark"] .theme-toggle:hover {
+    border-color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+}
+
+/* ===== تأثير تموج عند النقر ===== */
+.theme-toggle .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transform: scale(0);
+    animation: rippleAnim 0.6s ease-out forwards;
+}
+@keyframes rippleAnim {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* ===== تحسين ظهور الزر في الشاشات الصغيرة ===== */
+@media (max-width: 640px) {
+    .theme-toggle {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+    }
+}

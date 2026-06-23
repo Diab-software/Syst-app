@@ -14,9 +14,11 @@
 <nav class="navbar">
     <div class="logo">💬 Syst <span>{% block nav_title %}دردشة{% endblock %}</span></div>
     <div class="right-section">
-        <!-- زر تبديل الوضع الليلي -->
-        <button class="theme-toggle" onclick="toggleTheme()" title="تبديل الوضع الليلي" id="themeToggle">🌙</button>
-        <span style="font-weight:500; color:white;">{{ user.display_name if user else '' }}</span>
+        <!-- زر تبديل الوضع الليلي (عصري) -->
+        <button class="theme-toggle" onclick="toggleTheme(event)" title="تبديل الوضع الليلي" id="themeToggle">
+            <span class="icon" id="themeIcon">🌙</span>
+        </button>
+        <span style="font-weight:500; color:white; font-size:14px;">{{ user.display_name if user else '' }}</span>
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
     </div>
 </nav>
@@ -69,26 +71,47 @@
         }
     });
 
-    // ===== وظيفة تبديل الوضع الليلي =====
-    function toggleTheme() {
+    // ===== وظيفة تبديل الوضع الليلي (مع تأثيرات حركية) =====
+    function toggleTheme(event) {
         const html = document.documentElement;
         const currentTheme = html.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? '' : 'dark';
         html.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        const btn = document.getElementById('themeToggle');
-        if (btn) {
-            btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+        const icon = document.getElementById('themeIcon');
+        if (icon) {
+            // دوران الأيقونة مع تغييرها
+            icon.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            icon.style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+                icon.style.transform = 'rotate(0deg)';
+            }, 300);
+        }
+
+        // تأثير تموج (Ripple) عند النقر
+        if (event) {
+            const btn = event.currentTarget;
+            const rect = btn.getBoundingClientRect();
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (event.clientX - rect.left - size/2) + 'px';
+            ripple.style.top = (event.clientY - rect.top - size/2) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
         }
     }
 
     // ===== استعادة الوضع الليلي من localStorage =====
     (function() {
         const savedTheme = localStorage.getItem('theme');
+        const icon = document.getElementById('themeIcon');
         if (savedTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
-            const btn = document.getElementById('themeToggle');
-            if (btn) btn.textContent = '☀️';
+            if (icon) icon.textContent = '☀️';
         }
     })();
 
