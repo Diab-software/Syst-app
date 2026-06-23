@@ -4,90 +4,27 @@
 {% block extra_head %}
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <style>
+    /* أنماط أساسية */
     .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
     .msg:hover .msg-actions { opacity: 1; }
-    .msg-actions button {
-        font-size: 11px; padding: 2px 8px; border-radius: 20px;
-        border: none; cursor: pointer; background: rgba(0,0,0,0.05);
-    }
+    .msg-actions button { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: none; cursor: pointer; background: rgba(0,0,0,0.05); }
     .msg-actions button:hover { background: rgba(0,0,0,0.12); }
-    .input-area { position: relative; }
-    .attach-menu {
-        display: none;
-        position: absolute;
-        bottom: 70px;
-        left: 10px;
-        background: white;
-        border-radius: 16px;
-        padding: 12px;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-        z-index: 60;
-        border: 1px solid #e5e7eb;
-        min-width: 160px;
-    }
-    .attach-menu.active { display: block; }
-    .attach-menu .attach-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: background 0.2s;
-        color: #1a1a2e;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    .attach-menu .attach-item:hover { background: #f3f4f6; }
-    .attach-menu .attach-item .icon { font-size: 22px; width: 30px; text-align: center; }
-    .input-area .btn-group .icon-btn {
-        width: 42px; height: 42px;
-        border: none; border-radius: 50%;
-        background: transparent;
-        color: #4a5568;
-        font-size: 18px;
-        cursor: pointer;
-        transition: all 0.25s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .input-area .btn-group .icon-btn:hover {
-        background: #eef2f7;
-        transform: translateY(-2px);
-    }
-    .input-area .btn-group .send-btn {
-        background: linear-gradient(135deg, #6C63FF, #5A52D5);
-        color: white;
-        width: 46px; height: 46px;
-        border-radius: 50%;
-        border: none;
-        box-shadow: 0 4px 14px rgba(108,99,255,0.35);
-        cursor: pointer;
-        transition: all 0.25s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-    }
-    .input-area .btn-group .send-btn:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 8px 28px rgba(108,99,255,0.45);
-    }
-    .typing-indicator, .recording-indicator {
-        font-size: 13px;
-        color: var(--text-light);
-        margin: 4px 8px;
-        display: none;
-        animation: pulse 1.2s ease-in-out infinite;
-    }
+    .input-area { position: relative; display: flex; flex-wrap: wrap; gap: 6px; background: var(--card); padding: 6px 8px 6px 6px; border-radius: 50px; border: 1px solid var(--border); box-shadow: var(--shadow-light); align-items: center; margin-top: 12px; }
+    .input-area input { flex: 1; padding: 10px 16px; border: none; border-radius: 40px; font-size: 15px; outline: none; background: transparent; min-width: 100px; color: var(--text); }
+    .input-area .btn-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .input-area .btn-group .icon-btn { width: 42px; height: 42px; border: none; border-radius: 50%; background: transparent; color: var(--text-light); font-size: 18px; cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; }
+    .input-area .btn-group .icon-btn:hover { background: var(--card-hover); color: var(--text); transform: translateY(-2px); }
+    .input-area .btn-group .send-btn { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; width: 46px; height: 46px; border-radius: 50%; border: none; box-shadow: 0 4px 14px rgba(108,99,255,0.35); cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .input-area .btn-group .send-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 28px rgba(108,99,255,0.45); }
+    .typing-indicator, .recording-indicator { font-size: 13px; color: var(--text-light); margin: 4px 8px; display: none; animation: pulse 1.2s ease-in-out infinite; }
     .typing-indicator.active, .recording-indicator.active { display: block; }
     @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
-    @media (max-width: 640px) {
-        .input-area .btn-group .icon-btn { width: 36px; height: 36px; font-size: 15px; }
-        .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; }
-        .attach-menu { min-width: 140px; left: 0; right: 0; margin: 0 auto; }
-    }
+    .attach-menu { display: none; position: absolute; bottom: 70px; left: 10px; background: var(--card); border-radius: 16px; padding: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); z-index: 60; border: 1px solid var(--border); min-width: 160px; }
+    .attach-menu.active { display: block; }
+    .attach-menu .attach-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; cursor: pointer; transition: background 0.2s; color: var(--text); font-size: 14px; font-weight: 500; }
+    .attach-menu .attach-item:hover { background: var(--card-hover); }
+    .attach-menu .attach-item .icon { font-size: 22px; width: 30px; text-align: center; }
+    @media (max-width: 640px) { .input-area .btn-group .icon-btn { width: 36px; height: 36px; font-size: 15px; } .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; } }
 </style>
 {% endblock %}
 
@@ -103,9 +40,7 @@
         <span style="font-size:13px;color:rgba(255,255,255,0.7);">({{ group.memberships|length }} عضو)</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-        {% if is_admin %}
-        <button onclick="window.location.href='/group_settings/{{ group.id }}'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⚙️</button>
-        {% endif %}
+        {% if is_admin %}<button onclick="window.location.href='/group_settings/{{ group.id }}'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⚙️</button>{% endif %}
         <button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️</button>
     </div>
 </nav>
@@ -148,12 +83,8 @@
         <button class="icon-btn" onclick="startRecording()" title="تسجيل صوتي">🎤</button>
     </div>
     <div class="attach-menu" id="attachMenu">
-        <div class="attach-item" onclick="triggerFileInput('fileInput')">
-            <span class="icon">📎</span> رفع ملف
-        </div>
-        <div class="attach-item" onclick="triggerFileInput('imageInput')">
-            <span class="icon">🖼️</span> رفع صورة
-        </div>
+        <div class="attach-item" onclick="triggerFileInput('fileInput')"><span class="icon">📎</span> رفع ملف</div>
+        <div class="attach-item" onclick="triggerFileInput('imageInput')"><span class="icon">🖼️</span> رفع صورة</div>
     </div>
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, {{ group.id }}, null)">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, {{ group.id }}, null)">
@@ -165,13 +96,35 @@ const group = {{ group.id }};
 const user = {{ user.id }};
 socket.emit('join_group', { group_id: group });
 
-let typingTimer = null;
-let isTyping = false;
-let mediaRecorder = null;
-let audioChunks = [];
-let selectedImage = null;
+// ===== دالة إضافة الرسالة =====
+function appendMessage(data) {
+    const messagesContainer = document.getElementById('messages');
+    if (!messagesContainer) return;
+    const div = document.createElement('div');
+    div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
+    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
+    if (data.file_url) {
+        if (data.file_type === 'image') {
+            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
+        } else if (data.file_type === 'video') {
+            content += `<video controls><source src="${data.file_url}"></video>`;
+        } else if (data.file_type === 'audio') {
+            content += `<audio controls><source src="${data.file_url}"></audio>`;
+        } else {
+            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
+        }
+    } else {
+        content += `<p>${data.content}</p>`;
+    }
+    if (data.message_id) {
+        content += `<div class="msg-actions"><button onclick="deleteMsg(${data.message_id})">🗑️</button><button onclick="pinMsg(${data.message_id})">📌</button></div>`;
+    }
+    div.innerHTML = content;
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
-socket.on("new_message", function(data) {
+socket.on('new_message', function(data) {
     if (data.group_id != group) return;
     appendMessage(data);
 });
@@ -198,28 +151,6 @@ socket.on('recording', function(data) {
     }
 });
 
-function appendMessage(data) {
-    const div = document.createElement('div');
-    div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
-    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
-    if (data.file_url) {
-        if (data.file_type === 'image') {
-            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
-        } else if (data.file_type === 'video') {
-            content += `<video controls><source src="${data.file_url}"></video>`;
-        } else if (data.file_type === 'audio') {
-            content += `<audio controls><source src="${data.file_url}"></audio>`;
-        } else {
-            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
-        }
-    } else {
-        content += `<p>${data.content}</p>`;
-    }
-    div.innerHTML = content;
-    document.getElementById('messages').appendChild(div);
-    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-}
-
 function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
@@ -236,6 +167,8 @@ function pinMsg(id) {
     fetch(`/pin_message/${id}`, {method:'POST'}).then(() => location.reload());
 }
 
+let typingTimer = null;
+let isTyping = false;
 function handleTyping() {
     if (!isTyping) {
         isTyping = true;
@@ -253,6 +186,7 @@ function triggerFileInput(id) {
     document.getElementById('attachMenu').classList.remove('active');
 }
 
+let selectedImage = null;
 function handleImageSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
@@ -261,25 +195,24 @@ function handleImageSelect(input, group_id, private_with) {
         input.value = '';
         return;
     }
-    selectedImage = file;
     const reader = new FileReader();
     reader.onload = function(e) {
         const container = document.createElement('div');
         container.style.cssText = 'background:white;border-radius:12px;padding:8px;margin-bottom:8px;border:2px solid #6C63FF;max-width:200px;';
         container.innerHTML = `<img src="${e.target.result}" style="width:100%;border-radius:8px;max-height:150px;object-fit:cover;"><button onclick="this.parentElement.remove();selectedImage=null;" style="display:block;margin-top:4px;background:#EF4444;color:white;border:none;padding:4px 12px;border-radius:30px;cursor:pointer;">✕ إلغاء</button><button onclick="sendImage(this)" style="display:block;margin-top:4px;background:#6C63FF;color:white;border:none;padding:4px 12px;border-radius:30px;cursor:pointer;">إرسال الصورة</button>`;
         document.getElementById('messages').appendChild(container);
-        window._selectedImage = file;
+        selectedImage = file;
         window._previewContainer = container;
     };
     reader.readAsDataURL(file);
     input.value = '';
 }
 function sendImage(btn) {
-    if (!window._selectedImage) return;
-    uploadFileDirect(window._selectedImage, group, null);
+    if (!selectedImage) return;
+    uploadFileDirect(selectedImage, group, null);
     if (window._previewContainer) {
         window._previewContainer.remove();
-        window._selectedImage = null;
+        selectedImage = null;
         window._previewContainer = null;
     }
 }
@@ -306,6 +239,8 @@ function uploadFileDirect(file, group_id, private_with) {
         .catch(() => alert('خطأ في الخادم'));
 }
 
+let mediaRecorder = null;
+let audioChunks = [];
 function startRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
