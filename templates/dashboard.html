@@ -49,10 +49,14 @@
 {% for g in groups %}
 <div class="chat-card" onclick="window.location.href='/chat/group/{{ g.id }}'">
     <div class="info">
-        <div class="avatar" style="background:linear-gradient(135deg,#10B981,#059669);">👥</div>
+        {% if g.group_pic %}
+        <div class="avatar" style="background-image:url({{ url_for('download_file', filename='profiles/'+g.group_pic) }});background-size:cover;"></div>
+        {% else %}
+        <div class="avatar" style="background:linear-gradient(135deg,#10B981,#059669);">{{ g.name[0]|upper }}</div>
+        {% endif %}
         <div>
             <div class="name">{{ g.name }}</div>
-            <div class="username">مجموعة</div>
+            <div class="username">مجموعة • {{ g.memberships|length }} عضو</div>
             {% if g.description %}<div class="status">{{ g.description }}</div>{% endif %}
         </div>
     </div>

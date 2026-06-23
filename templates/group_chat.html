@@ -92,6 +92,24 @@
 {% endblock %}
 
 {% block content %}
+<nav class="navbar" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        {% if group.group_pic %}
+        <img src="{{ url_for('download_file', filename='profiles/'+group.group_pic) }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3);">
+        {% else %}
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#10B981,#059669);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;">{{ group.name[0]|upper }}</div>
+        {% endif %}
+        <span style="font-weight:600;font-size:18px;">{{ group.name }}</span>
+        <span style="font-size:13px;color:rgba(255,255,255,0.7);">({{ group.memberships|length }} عضو)</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        {% if is_admin %}
+        <button onclick="window.location.href='/group_settings/{{ group.id }}'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⚙️</button>
+        {% endif %}
+        <button onclick="window.location.href='/dashboard'" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 14px;border-radius:30px;cursor:pointer;">⬅️</button>
+    </div>
+</nav>
+
 <div class="messages" id="messages">
     {% for msg in messages %}
     <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}" id="msg-{{ msg.id }}">
@@ -129,7 +147,6 @@
         <button class="icon-btn" onclick="toggleAttachMenu()" title="رفع مرفق">📎</button>
         <button class="icon-btn" onclick="startRecording()" title="تسجيل صوتي">🎤</button>
     </div>
-    <!-- قائمة المرفقات المنبثقة -->
     <div class="attach-menu" id="attachMenu">
         <div class="attach-item" onclick="triggerFileInput('fileInput')">
             <span class="icon">📎</span> رفع ملف
@@ -271,7 +288,6 @@ function handleFileSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
     if (file.type.startsWith('image/')) {
-        // استخدام نفس دالة معاينة الصورة
         const event = { target: input };
         handleImageSelect(event, group_id, private_with);
         return;
