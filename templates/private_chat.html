@@ -7,14 +7,10 @@
     <source src="https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1" type="audio/mpeg">
 </audio>
 <style>
-    /* ===== أنماط المكالمة الواردة ===== */
     .incoming-call {
         display: none;
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.7);
         backdrop-filter: blur(10px);
         z-index: 5000;
@@ -43,8 +39,7 @@
         to { opacity: 1; }
     }
     .incoming-call .caller-avatar {
-        width: 90px;
-        height: 90px;
+        width: 90px; height: 90px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         margin: 0 auto 12px;
@@ -55,31 +50,10 @@
         color: white;
         border: 3px solid rgba(255,255,255,0.2);
     }
-    .incoming-call .caller-name {
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--text);
-    }
-    .incoming-call .caller-username {
-        font-size: 14px;
-        color: var(--text-light);
-        margin-bottom: 4px;
-    }
-    .incoming-call .call-type {
-        font-size: 16px;
-        color: var(--text-light);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-    }
-    .incoming-call .call-actions {
-        display: flex;
-        gap: 20px;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
+    .incoming-call .caller-name { font-size: 22px; font-weight: 700; color: var(--text); }
+    .incoming-call .caller-username { font-size: 14px; color: var(--text-light); margin-bottom: 4px; }
+    .incoming-call .call-type { font-size: 16px; color: var(--text-light); margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .incoming-call .call-actions { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
     .incoming-call .call-actions button {
         padding: 14px 32px;
         border-radius: 40px;
@@ -92,17 +66,9 @@
         align-items: center;
         gap: 8px;
     }
-    .incoming-call .call-actions .accept {
-        background: #10B981;
-        color: white;
-        box-shadow: 0 4px 14px rgba(16,185,129,0.4);
-    }
+    .incoming-call .call-actions .accept { background: #10B981; color: white; box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
     .incoming-call .call-actions .accept:hover { transform: scale(1.05); }
-    .incoming-call .call-actions .reject {
-        background: #EF4444;
-        color: white;
-        box-shadow: 0 4px 14px rgba(239,68,68,0.4);
-    }
+    .incoming-call .call-actions .reject { background: #EF4444; color: white; box-shadow: 0 4px 14px rgba(239,68,68,0.4); }
     .incoming-call .call-actions .reject:hover { transform: scale(1.05); }
     .incoming-call .call-actions .accept:active,
     .incoming-call .call-actions .reject:active { transform: scale(0.92); }
@@ -120,7 +86,6 @@
         50% { transform: scale(1.8); opacity: 0.4; }
         100% { transform: scale(1); opacity: 1; }
     }
-    /* ===== تحسينات عامة ===== */
     .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
     .msg:hover .msg-actions { opacity: 1; }
     .msg-actions button {
@@ -134,12 +99,12 @@
         position: absolute;
         bottom: 70px;
         left: 10px;
-        background: white;
+        background: var(--card);
         border-radius: 16px;
         padding: 12px;
         box-shadow: 0 8px 40px rgba(0,0,0,0.15);
         z-index: 60;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--border);
         min-width: 160px;
     }
     .attach-menu.active { display: block; }
@@ -151,17 +116,18 @@
         border-radius: 12px;
         cursor: pointer;
         transition: background 0.2s;
-        color: #1a1a2e;
+        color: var(--text);
         font-size: 14px;
         font-weight: 500;
     }
-    .attach-menu .attach-item:hover { background: #f3f4f6; }
+    .attach-menu .attach-item:hover { background: var(--card-hover); }
     .attach-menu .attach-item .icon { font-size: 22px; width: 30px; text-align: center; }
     .input-area .btn-group .icon-btn {
         width: 42px; height: 42px;
-        border: none; border-radius: 50%;
+        border: none;
+        border-radius: 50%;
         background: transparent;
-        color: #4a5568;
+        color: var(--text-light);
         font-size: 18px;
         cursor: pointer;
         transition: all 0.25s ease;
@@ -170,11 +136,12 @@
         justify-content: center;
     }
     .input-area .btn-group .icon-btn:hover {
-        background: #eef2f7;
+        background: var(--card-hover);
+        color: var(--text);
         transform: translateY(-2px);
     }
     .input-area .btn-group .send-btn {
-        background: linear-gradient(135deg, #6C63FF, #5A52D5);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: white;
         width: 46px; height: 46px;
         border-radius: 50%;
@@ -203,7 +170,7 @@
     .image-preview-container {
         display: none;
         position: relative;
-        background: white;
+        background: var(--card);
         border-radius: 12px;
         padding: 8px;
         margin-bottom: 8px;
@@ -213,17 +180,21 @@
     .image-preview-container.active { display: block; }
     .image-preview-container img { width: 100%; border-radius: 8px; max-height: 150px; object-fit: cover; }
     .image-preview-container .remove-preview {
-        position: absolute; top: -8px; right: -8px;
-        background: #EF4444; color: white; border: none;
-        border-radius: 50%; width: 24px; height: 24px;
-        cursor: pointer; font-size: 14px;
+        position: absolute;
+        top: -8px; right: -8px;
+        background: #EF4444; color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px; height: 24px;
+        cursor: pointer;
+        font-size: 14px;
     }
     .emoji-picker {
         display: none;
         position: absolute;
         bottom: 70px;
         left: 10px;
-        background: white;
+        background: var(--card);
         border-radius: 16px;
         padding: 12px;
         box-shadow: 0 8px 40px rgba(0,0,0,0.15);
@@ -233,20 +204,130 @@
         z-index: 50;
         max-height: 200px;
         overflow-y: auto;
-        border: 1px solid #E5E7EB;
+        border: 1px solid var(--border);
     }
     .emoji-picker.active { display: grid; }
     .emoji-picker button {
         border: none; background: none; font-size: 22px;
         cursor: pointer; padding: 4px; border-radius: 6px;
     }
-    .emoji-picker button:hover { background: #f3f4f6; }
+    .emoji-picker button:hover { background: var(--card-hover); }
+    .call-window .call-controls {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .call-window .call-controls button {
+        padding: 14px 24px;
+        border-radius: 40px;
+        color: white;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 80px;
+        justify-content: center;
+    }
+    .call-window .call-controls button:hover { transform: translateY(-4px); }
+    .call-window .call-controls .end { background: #EF4444; box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+    .call-window .call-controls .mute { background: #F59E0B; color: #1a1a2e; box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+    .call-window .call-controls .video-toggle { background: #6C63FF; box-shadow: 0 6px 20px rgba(108,99,255,0.4); }
+    .call-window .call-controls .speaker { background: #8B5CF6; box-shadow: 0 6px 20px rgba(139,92,246,0.4); }
+    .call-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        background: var(--card);
+        border-radius: 40px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-light);
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    .call-bar .call-label { font-size: 13px; color: var(--text-light); font-weight: 500; }
+    .call-bar .call-btn-top {
+        width: 38px; height: 38px;
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .call-bar .call-btn-top.voice { background: #10B981; color: white; box-shadow: 0 3px 10px rgba(16,185,129,0.3); }
+    .call-bar .call-btn-top.video { background: #3B82F6; color: white; box-shadow: 0 3px 10px rgba(59,130,246,0.3); }
+    .call-bar .call-btn-top:hover { transform: translateY(-2px) scale(1.05); }
+    .call-window {
+        display: none;
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%) scale(0.95);
+        background: linear-gradient(145deg, #1a1a2e, #16213e);
+        padding: 32px 28px;
+        border-radius: 32px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+        z-index: 3000;
+        width: 92%;
+        max-width: 440px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        opacity: 0;
+        pointer-events: none;
+    }
+    .call-window.active { display: block; opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+    .call-window .call-avatar {
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6C63FF, #5A52D5);
+        margin: 0 auto 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 44px;
+        color: white;
+        border: 3px solid rgba(255,255,255,0.15);
+        box-shadow: 0 12px 30px rgba(108,99,255,0.3);
+        transition: transform 0.3s ease;
+    }
+    .call-window .call-avatar.pulse { animation: avatarPulse 1.2s ease-in-out infinite; }
+    @keyframes avatarPulse {
+        0% { transform: scale(1); box-shadow: 0 12px 30px rgba(108,99,255,0.3); }
+        50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(108,99,255,0.5); }
+        100% { transform: scale(1); box-shadow: 0 12px 30px rgba(108,99,255,0.3); }
+    }
+    .call-window .call-title { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .call-window .call-status { color: #aab; font-size: 16px; margin-bottom: 20px; }
+    .call-window .call-status .timer { font-weight: 600; color: #6C63FF; }
+    .call-window .call-status .ringing-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        background: #10B981;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: ringPulse 0.8s ease-in-out infinite;
+    }
+    .call-window .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .call-window .video-grid video { width: 100%; border-radius: 12px; background: #0a0a1a; }
     @media (max-width: 640px) {
         .input-area .btn-group .icon-btn { width: 36px; height: 36px; font-size: 15px; }
         .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; }
         .attach-menu { min-width: 140px; left: 0; right: 0; margin: 0 auto; }
         .incoming-call .call-card { padding: 24px 16px; }
         .incoming-call .caller-avatar { width: 70px; height: 70px; font-size: 32px; }
+        .call-window { padding: 20px 16px; max-width: 95%; }
+        .call-window .call-avatar { width: 80px; height: 80px; font-size: 36px; }
+        .call-window .call-title { font-size: 20px; }
+        .call-window .video-grid { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
@@ -320,7 +401,6 @@
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
     <div class="emoji-picker" id="emojiPicker">
-        <!-- إيموجي -->
         <button onclick="insertEmoji('😊')">😊</button>
         <button onclick="insertEmoji('😂')">😂</button>
         <button onclick="insertEmoji('🤣')">🤣</button>
@@ -412,26 +492,24 @@
 </div>
 
 <script>
-// ===== دوال JavaScript مع إصلاح الصوت والخلط =====
+// ===== إعدادات الاتصال =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
 const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
 let currentCallId = null;
 let isIncomingCall = false;
-let isCallActive = false;
+let callActive = false;
 
 socket.emit('join_private', { user_id: other });
 
 // ===== دوال المكالمات =====
 let peerConnection = null;
 let localStream = null;
-let callActive = false;
-let callType = 'voice'; // 'voice' or 'video'
+let callType = 'voice'; // 'voice' أو 'video'
 let callTimerInterval = null;
 let callStartTime = null;
 let incomingOffer = null;
-let incomingCaller = null;
 
 const iceServers = {
     iceServers: [
@@ -453,10 +531,10 @@ function stopRingtone() {
     ringtone.currentTime = 0;
 }
 
-// ===== عرض/إخفاء شاشة المكالمة الواردة =====
+// ===== شاشة المكالمة الواردة =====
 function showIncomingCall(caller, video) {
     isIncomingCall = true;
-    const screen = document.getElementById('incomingCall');
+    document.getElementById('incomingCall').classList.add('active');
     document.getElementById('incomingAvatar').textContent = '👤';
     document.getElementById('incomingName').textContent = caller.display_name || 'المتصل';
     document.getElementById('incomingUsername').textContent = '@' + (caller.username || '');
@@ -464,11 +542,7 @@ function showIncomingCall(caller, video) {
         <span class="ringing-animation"></span>
         <span>${video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية'} واردة...</span>
     `;
-    screen.classList.add('active');
     playRingtone(true);
-    if (typeof showToast === 'function') {
-        showToast(`📞 مكالمة ${video ? 'فيديو' : 'صوتية'} واردة من ${caller.display_name}`, 'call');
-    }
 }
 function hideIncomingCall() {
     isIncomingCall = false;
@@ -481,25 +555,25 @@ async function acceptCall() {
     if (!incomingOffer) return;
     hideIncomingCall();
     
-    // تحديد نوع المكالمة بناءً على incomingOffer
+    // تحديد نوع المكالمة
     callType = incomingOffer.video ? 'video' : 'voice';
     
+    // إظهار نافذة المكالمة
     const window = document.getElementById('callWindow');
     window.classList.add('active');
     document.getElementById('callTitle').textContent = callType === 'video' ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
-    document.getElementById('callAvatar').textContent = '👤';
     document.getElementById('videoGrid').style.display = callType === 'video' ? 'grid' : 'none';
     
     // إنشاء peer connection (غير بادئ)
     await createPeerConnection(false);
     
-    // تعيين الوصف البعيد (الـ offer)
+    // تعيين الوصف البعيد
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer.signal));
     
     // إنشاء الـ answer
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
-    socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
+    socket.emit('signal', { room: room, signal: answer, call_id: currentCallId, video: callType === 'video' });
     
     callActive = true;
     updateCallUI('connected');
@@ -519,6 +593,7 @@ function rejectCall() {
 socket.on('signal', async (data) => {
     if (data.from === user.toString()) return;
 
+    // رفض المكالمة
     if (data.signal && data.signal.type === 'reject') {
         hideIncomingCall();
         stopRingtone();
@@ -533,34 +608,25 @@ socket.on('signal', async (data) => {
             video: data.video || false,
             caller: data.from
         };
-        // جلب معلومات المتصل
         fetch(`/api/user/${data.from}`)
             .then(r => r.json())
-            .then(caller => {
-                showIncomingCall(caller, data.video || false);
-            })
-            .catch(() => {
-                showIncomingCall({ display_name: data.from, username: data.from }, data.video || false);
-            });
+            .then(caller => showIncomingCall(caller, data.video || false))
+            .catch(() => showIncomingCall({ display_name: data.from, username: data.from }, data.video || false));
         if (data.call_id) currentCallId = data.call_id;
         return;
     }
 
+    // إذا لم يكن هناك اتصال، تجاهل
     if (!peerConnection) return;
 
     try {
-        if (data.signal.type === 'offer') {
-            // في حال وصول offer أثناء وجود peerConnection (نادراً)
-            return;
-        } else if (data.signal.type === 'answer') {
+        if (data.signal.type === 'answer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
             updateCallUI('connected');
             stopRingtone();
             startCallTimer();
         } else if (data.signal.type === 'candidate') {
-            if (peerConnection) {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
-            }
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
         } else if (data.signal.type === 'end') {
             endCall();
         }
@@ -581,9 +647,9 @@ async function createPeerConnection(isInitiator) {
         document.getElementById('remoteVideo').srcObject = e.streams[0];
     };
 
-    // طلب الـ media (صوت وفيديو حسب النوع) وإضافة المسارات
+    // طلب الوسائط (صوت و/أو فيديو)
+    const constraints = { audio: true, video: callType === 'video' };
     try {
-        const constraints = { audio: true, video: callType === 'video' };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById('localVideo').srcObject = localStream;
         localStream.getTracks().forEach(track => {
@@ -596,7 +662,6 @@ async function createPeerConnection(isInitiator) {
     }
 
     if (isInitiator) {
-        // إنشاء offer
         try {
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
@@ -619,19 +684,14 @@ async function createPeerConnection(isInitiator) {
 // ===== بدء مكالمة (من المتصل) =====
 function startCall(video) {
     if (callActive || isIncomingCall) return;
-    
     callType = video ? 'video' : 'voice';
-    
-    const window = document.getElementById('callWindow');
-    window.classList.add('active');
+    document.getElementById('callWindow').classList.add('active');
     document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
-    document.getElementById('callAvatar').textContent = '👤';
     document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
     currentCallId = null;
     document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
     document.getElementById('callTimer').textContent = '';
     document.getElementById('ringingIndicator').style.display = 'inline-block';
-    
     createPeerConnection(true);
 }
 
@@ -706,17 +766,35 @@ function toggleSpeaker() {
     alert('🔊 سيتم تفعيل وضع السماعة الخارجية (قيد التطوير)');
 }
 
-// ===== بقية الدوال (الرسائل، الإيموجي، المرفقات) =====
-let typingTimer = null;
-let isTyping = false;
-let mediaRecorder = null;
-let audioChunks = [];
-let selectedImage = null;
-
+// ===== دوال الرسائل (إصلاح عرض الرسائل بدون تحديث) =====
 socket.on('new_message', function(data) {
+    // التحقق أن الرسالة تخص هذه المحادثة
     if (data.private_with != other && data.user_id != other) return;
     appendMessage(data);
 });
+
+function appendMessage(data) {
+    const messagesContainer = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
+    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
+    if (data.file_url) {
+        if (data.file_type === 'image') {
+            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
+        } else if (data.file_type === 'video') {
+            content += `<video controls><source src="${data.file_url}"></video>`;
+        } else if (data.file_type === 'audio') {
+            content += `<audio controls><source src="${data.file_url}"></audio>`;
+        } else {
+            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
+        }
+    } else {
+        content += `<p>${data.content}</p>`;
+    }
+    div.innerHTML = content;
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
 socket.on('typing', function(data) {
     if (data.private_with == user) {
@@ -740,28 +818,7 @@ socket.on('recording', function(data) {
     }
 });
 
-function appendMessage(data) {
-    const div = document.createElement('div');
-    div.className = `msg ${data.user_id == user ? 'my-msg' : 'other-msg'}`;
-    let content = `<div class="msg-header"><span class="user">${data.display_name}</span><span class="time">${data.timestamp}</span></div>`;
-    if (data.file_url) {
-        if (data.file_type === 'image') {
-            content += `<img src="${data.file_url}" onclick="window.open(this.src)">`;
-        } else if (data.file_type === 'video') {
-            content += `<video controls><source src="${data.file_url}"></video>`;
-        } else if (data.file_type === 'audio') {
-            content += `<audio controls><source src="${data.file_url}"></audio>`;
-        } else {
-            content += `<div class="file-link"><a href="${data.file_url}" target="_blank">📎 تحميل ${data.file_name}</a></div>`;
-        }
-    } else {
-        content += `<p>${data.content}</p>`;
-    }
-    div.innerHTML = content;
-    document.getElementById('messages').appendChild(div);
-    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-}
-
+// ===== دوال الإرسال والمرفقات =====
 function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
@@ -779,6 +836,8 @@ function pinMsg(id) {
     fetch(`/pin_message/${id}`, {method:'POST'}).then(() => location.reload());
 }
 
+let typingTimer = null;
+let isTyping = false;
 function handleTyping() {
     if (!isTyping) {
         isTyping = true;
@@ -815,22 +874,22 @@ function handleImageSelect(input, group_id, private_with) {
         input.value = '';
         return;
     }
-    selectedImage = file;
     const reader = new FileReader();
     reader.onload = function(e) {
         document.getElementById('previewImage').src = e.target.result;
         document.getElementById('imagePreview').classList.add('active');
+        window._selectedImage = file;
     };
     reader.readAsDataURL(file);
     input.value = '';
 }
 function removeImagePreview() {
     document.getElementById('imagePreview').classList.remove('active');
-    selectedImage = null;
+    window._selectedImage = null;
 }
 function sendImage() {
-    if (!selectedImage) return;
-    uploadFileDirect(selectedImage, null, other);
+    if (!window._selectedImage) return;
+    uploadFileDirect(window._selectedImage, null, other);
     removeImagePreview();
 }
 
@@ -838,11 +897,11 @@ function handleFileSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
     if (file.type.startsWith('image/')) {
-        selectedImage = file;
         const reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById('previewImage').src = e.target.result;
             document.getElementById('imagePreview').classList.add('active');
+            window._selectedImage = file;
         };
         reader.readAsDataURL(file);
         input.value = '';
@@ -862,6 +921,8 @@ function uploadFileDirect(file, group_id, private_with) {
         .catch(() => alert('خطأ في الخادم'));
 }
 
+let mediaRecorder = null;
+let audioChunks = [];
 function startRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
