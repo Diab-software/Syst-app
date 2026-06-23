@@ -7,7 +7,7 @@
     <source src="https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1" type="audio/mpeg">
 </audio>
 <style>
-    /* ===== جميع الأنماط الأساسية ===== */
+    /* ===== الأنماط الأساسية ===== */
     .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
     .msg:hover .msg-actions { opacity: 1; }
     .msg-actions button { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: none; cursor: pointer; background: rgba(0,0,0,0.05); color: var(--text); }
@@ -114,24 +114,8 @@
         padding-bottom: 12px;
         border-bottom: 1px solid var(--border);
     }
-    .chat-settings-modal .modal-header h3 {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .chat-settings-modal .modal-header .close-btn {
-        background: none;
-        border: none;
-        font-size: 28px;
-        cursor: pointer;
-        color: var(--text-light);
-        transition: 0.2s;
-        padding: 4px 8px;
-        border-radius: 50%;
-    }
+    .chat-settings-modal .modal-header h3 { font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .chat-settings-modal .modal-header .close-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-light); transition: 0.2s; padding: 4px 8px; border-radius: 50%; }
     .chat-settings-modal .modal-header .close-btn:hover { background: var(--card-hover); color: var(--text); }
 
     .chat-settings-modal .user-info-card {
@@ -145,8 +129,7 @@
         border: 1px solid var(--border);
     }
     .chat-settings-modal .user-info-card .avatar {
-        width: 56px;
-        height: 56px;
+        width: 56px; height: 56px;
         border-radius: 50%;
         background: var(--primary);
         background-size: cover;
@@ -165,20 +148,13 @@
 
     .chat-settings-modal .settings-actions { display: flex; flex-direction: column; gap: 10px; }
     .chat-settings-modal .settings-actions .action-btn {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 14px 18px;
-        border: none;
-        border-radius: 14px;
-        font-size: 16px;
-        font-weight: 500;
-        cursor: pointer;
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 18px; border: none; border-radius: 14px;
+        font-size: 16px; font-weight: 500; cursor: pointer;
         transition: all 0.25s ease;
         background: var(--bg-light);
         color: var(--text);
-        width: 100%;
-        text-align: right;
+        width: 100%; text-align: right;
     }
     .chat-settings-modal .settings-actions .action-btn:hover { transform: translateX(-4px); }
     .chat-settings-modal .settings-actions .action-btn .icon { font-size: 22px; width: 36px; text-align: center; }
@@ -189,21 +165,14 @@
     .chat-settings-modal .settings-actions .action-btn.block.unblock { color: #10B981; }
     .chat-settings-modal .settings-actions .action-btn.block.unblock:hover { background: #D1FAE5; }
     .chat-settings-modal .settings-actions .action-btn .badge {
-        background: #EF4444;
-        color: white;
-        font-size: 11px;
-        padding: 2px 10px;
-        border-radius: 20px;
-        margin-right: auto;
+        background: #EF4444; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; margin-right: auto;
     }
 
-    /* ===== زر الإعدادات في شريط العنوان ===== */
     .settings-btn-top {
         background: rgba(108,99,255,0.12);
         border: none;
         border-radius: 50%;
-        width: 38px;
-        height: 38px;
+        width: 38px; height: 38px;
         font-size: 18px;
         cursor: pointer;
         color: var(--text);
@@ -246,6 +215,7 @@
         {% endif %}
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
+        <!-- زر الإعدادات -->
         <button class="settings-btn-top" onclick="openChatSettings()" title="إعدادات المحادثة">⚙️</button>
         <button onclick="window.location.href='/dashboard'" style="background:rgba(108,99,255,0.1);border:none;color:var(--text);padding:6px 14px;border-radius:30px;cursor:pointer;font-size:14px;">⬅️</button>
     </div>
@@ -405,7 +375,7 @@
     </div>
 </div>
 
-<!-- ===== مودال إعدادات المحادثة (الكامل مع الأزرار) ===== -->
+<!-- ===== مودال إعدادات المحادثة (مع جميع الأزرار) ===== -->
 <div class="chat-settings-modal" id="chatSettingsModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -428,8 +398,7 @@
         <!-- أزرار الإجراءات -->
         <div class="settings-actions">
             <button class="action-btn" onclick="window.location.href='/profile'">
-                <span class="icon">👤</span>
-                عرض الملف الشخصي
+                <span class="icon">👤</span> عرض الملف الشخصي
             </button>
 
             <button class="action-btn block {% if is_blocked %}unblock{% endif %}" id="blockBtn" onclick="toggleBlock()">
@@ -438,14 +407,12 @@
             </button>
 
             <button class="action-btn danger delete" onclick="deleteChat()">
-                <span class="icon">💥</span>
-                تفجير المحادثة
+                <span class="icon">💥</span> تفجير المحادثة
                 <span class="badge">لطرفين</span>
             </button>
 
             <button class="action-btn" onclick="window.location.href='/call_log'">
-                <span class="icon">📋</span>
-                سجل المكالمات
+                <span class="icon">📋</span> سجل المكالمات
             </button>
         </div>
 
@@ -464,8 +431,6 @@ const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
 let currentCallId = null;
 let isIncomingCall = false;
 let callActive = false;
-
-// التحقق من حالة الحظر من الخادم (نمررها عبر القالب)
 const isBlocked = {{ 'true' if is_blocked else 'false' }};
 
 socket.emit('join_private', { user_id: other });
@@ -476,6 +441,8 @@ function openChatSettings() {
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+    } else {
+        console.error('Modal element not found!');
     }
 }
 
@@ -487,7 +454,7 @@ function closeChatSettings() {
     }
 }
 
-// إغلاق المودال عند الضغط خارج المحتوى
+// ===== إغلاق المودال عند الضغط خارج المحتوى =====
 document.addEventListener('click', function(event) {
     const modal = document.getElementById('chatSettingsModal');
     if (modal && modal.classList.contains('active')) {
@@ -539,10 +506,6 @@ function deleteChat() {
 }
 
 // ===== دوال المكالمات =====
-// (جميع دوال المكالمات السابقة تعمل هنا، تم اختصارها للحفاظ على المساحة)
-// ... الدوال هي نفسها السابقة، ولكن سيتم الاحتفاظ بها في الكود الفعلي.
-
-// نغمة الرنين
 const ringtone = document.getElementById('ringtone');
 function playRingtone(loop = true) {
     ringtone.currentTime = 0;
@@ -554,7 +517,6 @@ function stopRingtone() {
     ringtone.currentTime = 0;
 }
 
-// دوال المكالمات الأساسية
 let peerConnection = null;
 let localStream = null;
 let callType = 'voice';
@@ -818,7 +780,6 @@ function sendMsg() {
     document.getElementById('emojiPicker').classList.remove('active');
     document.getElementById('attachMenu').classList.remove('active');
 }
-
 function deleteMsg(id) {
     fetch(`/delete_message/${id}`, {method:'POST'}).then(() => location.reload());
 }
@@ -883,7 +844,6 @@ function sendImage() {
     uploadFileDirect(selectedImage, null, other);
     removeImagePreview();
 }
-
 function handleFileSelect(input, group_id, private_with) {
     const file = input.files[0];
     if (!file) return;
