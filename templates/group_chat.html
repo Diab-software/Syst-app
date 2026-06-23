@@ -11,6 +11,79 @@
         border: none; cursor: pointer; background: rgba(0,0,0,0.05);
     }
     .msg-actions button:hover { background: rgba(0,0,0,0.12); }
+    .input-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        background: white;
+        padding: 6px 8px 6px 6px;
+        border-radius: 50px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        align-items: center;
+        margin-top: 12px;
+    }
+    .input-area:focus-within {
+        border-color: #6C63FF;
+        box-shadow: 0 4px 20px rgba(108, 99, 255, 0.12);
+    }
+    .input-area input {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 40px;
+        font-size: 15px;
+        outline: none;
+        background: transparent;
+        min-width: 100px;
+    }
+    .input-area .btn-group {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+    .input-area .btn-group button {
+        width: 38px;
+        height: 38px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: #4a5568;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .input-area .btn-group button:hover {
+        background: #eef2f7;
+        transform: translateY(-2px);
+    }
+    .input-area .btn-group .send-btn {
+        background: linear-gradient(135deg, #6C63FF, #5A52D5);
+        color: white;
+        width: 42px;
+        height: 42px;
+        box-shadow: 0 4px 14px rgba(108, 99, 255, 0.35);
+    }
+    .input-area .btn-group .send-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 28px rgba(108, 99, 255, 0.45);
+    }
+    .typing-indicator, .recording-indicator {
+        font-size: 13px;
+        color: var(--text-light);
+        margin: 4px 8px;
+        display: none;
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+    .typing-indicator.active, .recording-indicator.active { display: block; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+    @media (max-width: 640px) {
+        .input-area .btn-group button { width: 34px; height: 34px; font-size: 14px; }
+        .input-area .btn-group .send-btn { width: 38px; height: 38px; }
+    }
 </style>
 {% endblock %}
 
@@ -45,7 +118,7 @@
 <div class="typing-indicator" id="typingIndicator">✍️ شخص ما يكتب...</div>
 <div class="recording-indicator" id="recordingIndicator">🎙️ شخص ما يسجل...</div>
 
-<div class="input-area">
+<div class="input-area" style="position:relative;">
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
     <div class="btn-group">
         <button class="send-btn" onclick="sendMsg()" title="إرسال">➤</button>

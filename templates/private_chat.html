@@ -7,6 +7,189 @@
     <source src="https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1" type="audio/mpeg">
 </audio>
 <style>
+    /* ===== شريط المكالمات العلوي ===== */
+    .call-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 8px 16px;
+        background: white;
+        border-radius: 40px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        border: 1px solid #e5e7eb;
+        flex-wrap: wrap;
+    }
+    .call-bar .call-label {
+        font-size: 13px;
+        color: var(--text-light);
+        font-weight: 500;
+        margin-left: 4px;
+    }
+    .call-bar .call-buttons {
+        display: flex;
+        gap: 6px;
+    }
+    .call-bar .call-btn-top {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .call-bar .call-btn-top.voice {
+        background: #10B981;
+        color: white;
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+    }
+    .call-bar .call-btn-top.video {
+        background: #3B82F6;
+        color: white;
+        box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+    }
+    .call-bar .call-btn-top:hover {
+        transform: translateY(-2px) scale(1.04);
+    }
+    .call-bar .call-btn-top:active {
+        transform: scale(0.92);
+    }
+
+    /* ===== شريط الإدخال السفلي ===== */
+    .input-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        background: white;
+        padding: 6px 8px 6px 6px;
+        border-radius: 50px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        align-items: center;
+        margin-top: 12px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-area:focus-within {
+        border-color: #6C63FF;
+        box-shadow: 0 4px 20px rgba(108, 99, 255, 0.12);
+    }
+    .input-area input {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 40px;
+        font-size: 15px;
+        outline: none;
+        background: transparent;
+        min-width: 100px;
+        color: #1a1a2e;
+    }
+    .input-area input::placeholder {
+        color: #9ca3af;
+        font-weight: 400;
+    }
+    .input-area .btn-group {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .input-area .btn-group button,
+    .input-area .btn-group label {
+        width: 38px;
+        height: 38px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: #4a5568;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .input-area .btn-group button:hover,
+    .input-area .btn-group label:hover {
+        background: #eef2f7;
+        transform: translateY(-2px);
+    }
+    .input-area .btn-group .send-btn {
+        background: linear-gradient(135deg, #6C63FF, #5A52D5);
+        color: white;
+        width: 42px;
+        height: 42px;
+        box-shadow: 0 4px 14px rgba(108, 99, 255, 0.35);
+    }
+    .input-area .btn-group .send-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 28px rgba(108, 99, 255, 0.45);
+    }
+    .input-area .btn-group .send-btn:active {
+        transform: scale(0.92);
+    }
+
+    /* ===== منقي الإيموجي ===== */
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        bottom: 70px;
+        left: 10px;
+        background: white;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        max-width: 280px;
+        z-index: 50;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #E5E7EB;
+    }
+    .emoji-picker.active { display: grid; }
+    .emoji-picker button {
+        border: none; background: none; font-size: 22px;
+        cursor: pointer; padding: 4px; border-radius: 6px;
+    }
+    .emoji-picker button:hover { background: #f3f4f6; }
+
+    /* ===== معاينة الصورة ===== */
+    .image-preview-container {
+        display: none;
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        padding: 8px;
+        margin-bottom: 8px;
+        border: 2px solid var(--primary);
+        max-width: 200px;
+    }
+    .image-preview-container.active { display: block; }
+    .image-preview-container img { width: 100%; border-radius: 8px; max-height: 150px; object-fit: cover; }
+    .image-preview-container .remove-preview {
+        position: absolute; top: -8px; right: -8px;
+        background: #EF4444; color: white; border: none;
+        border-radius: 50%; width: 24px; height: 24px;
+        cursor: pointer; font-size: 14px;
+    }
+
+    /* ===== المؤشرات ===== */
+    .typing-indicator, .recording-indicator {
+        font-size: 13px;
+        color: var(--text-light);
+        margin: 4px 8px;
+        display: none;
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+    .typing-indicator.active, .recording-indicator.active { display: block; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+
+    /* ===== الرسائل ===== */
     .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
     .msg:hover .msg-actions { opacity: 1; }
     .msg-actions button {
@@ -14,10 +197,28 @@
         border: none; cursor: pointer; background: rgba(0,0,0,0.05);
     }
     .msg-actions button:hover { background: rgba(0,0,0,0.12); }
+
+    @media (max-width: 640px) {
+        .call-bar { padding: 6px 12px; }
+        .call-bar .call-btn-top { width: 32px; height: 32px; font-size: 14px; }
+        .input-area .btn-group button,
+        .input-area .btn-group label { width: 34px; height: 34px; font-size: 14px; }
+        .input-area .btn-group .send-btn { width: 38px; height: 38px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- ===== شريط المكالمات العلوي ===== -->
+<div class="call-bar">
+    <span class="call-label">📞 مكالمة:</span>
+    <div class="call-buttons">
+        <button class="call-btn-top voice" onclick="startCall(false)" title="مكالمة صوتية">📞</button>
+        <button class="call-btn-top video" onclick="startCall(true)" title="مكالمة فيديو">📹</button>
+    </div>
+</div>
+
+<!-- ===== منطقة الرسائل ===== -->
 <div class="messages" id="messages">
     {% for msg in messages %}
     <div class="msg {% if msg.user_id == user.id %}my-msg{% else %}other-msg{% endif %}" id="msg-{{ msg.id }}">
@@ -45,29 +246,33 @@
     {% endfor %}
 </div>
 
+<!-- ===== المؤشرات ===== -->
 <div class="typing-indicator" id="typingIndicator">✍️ {{ other.display_name }} يكتب...</div>
 <div class="recording-indicator" id="recordingIndicator">🎙️ {{ other.display_name }} يسجل...</div>
 
+<!-- ===== معاينة الصورة ===== -->
 <div class="image-preview-container" id="imagePreview">
     <button class="remove-preview" onclick="removeImagePreview()">✕</button>
     <img id="previewImage" src="">
     <button onclick="sendImage()" style="background:var(--primary);color:white;border:none;padding:4px 12px;border-radius:30px;margin-top:4px;cursor:pointer;font-size:13px;">إرسال الصورة</button>
 </div>
 
-<div class="input-area">
+<!-- ===== شريط الإدخال السفلي (عصري) ===== -->
+<div class="input-area" style="position:relative;">
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()">
     <div class="btn-group">
+        <!-- زر الإرسال -->
         <button class="send-btn" onclick="sendMsg()" title="إرسال">➤</button>
+        <!-- أزرار الوظائف -->
         <button onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
         <button onclick="document.getElementById('fileInput').click()" title="رفع ملف">📎</button>
         <button onclick="document.getElementById('imageInput').click()" title="رفع صورة">🖼️</button>
         <button onclick="startRecording()" title="تسجيل صوتي">🎤</button>
-        <button class="call-btn" onclick="startCall(false)" title="مكالمة صوتية">📞</button>
-        <button class="call-btn video" onclick="startCall(true)" title="مكالمة فيديو">📹</button>
     </div>
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
 
+    <!-- منقي الإيموجي -->
     <div class="emoji-picker" id="emojiPicker">
         <button onclick="insertEmoji('😊')">😊</button>
         <button onclick="insertEmoji('😂')">😂</button>
@@ -121,6 +326,7 @@
     </div>
 </div>
 
+<!-- ===== نافذة المكالمة ===== -->
 <div class="call-window" id="callWindow">
     <div class="call-title" id="callTitle">📞 مكالمة</div>
     <div class="call-avatar" id="callAvatar">👤</div>
@@ -138,6 +344,7 @@
 </div>
 
 <script>
+// ===== جميع دوال JavaScript (نفس السابق، مع إضافة دوال المكالمات) =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
@@ -329,7 +536,7 @@ function startRecording() {
         .catch(err => alert('لا يمكن الوصول للميكروفون: '+err));
 }
 
-// ===== المكالمات =====
+// ===== دوال المكالمات (WebRTC) =====
 let peerConnection = null;
 let localStream = null;
 let callActive = false;
