@@ -193,7 +193,6 @@
         <button class="icon-btn" onclick="toggleAttachMenu()" title="رفع مرفق">📎</button>
         <button class="icon-btn" onclick="startRecording()" title="تسجيل صوتي">🎤</button>
     </div>
-    <!-- قائمة المرفقات -->
     <div class="attach-menu" id="attachMenu">
         <div class="attach-item" onclick="triggerFileInput('fileInput')">
             <span class="icon">📎</span> رفع ملف
@@ -205,7 +204,7 @@
     <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(this, null, {{ other.id }})">
     <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(this, null, {{ other.id }})">
     <div class="emoji-picker" id="emojiPicker">
-        <!-- إيموجي (مختصر) -->
+        <!-- إيموجي -->
         <button onclick="insertEmoji('😊')">😊</button>
         <button onclick="insertEmoji('😂')">😂</button>
         <button onclick="insertEmoji('🤣')">🤣</button>
@@ -258,7 +257,7 @@
     </div>
 </div>
 
-<!-- ===== نافذة المكالمة العصرية ===== -->
+<!-- ===== نافذة المكالمة ===== -->
 <div class="call-window" id="callWindow">
     <div class="call-avatar pulse" id="callAvatar">👤</div>
     <div class="call-title" id="callTitle">📞 مكالمة</div>
@@ -280,11 +279,13 @@
 </div>
 
 <script>
-// ===== دوال JavaScript (مع تحسينات المكالمات) =====
+// ===== دوال JavaScript مع إصلاح المكالمات =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
 const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
+let currentCallId = null;
+
 socket.emit('join_private', { user_id: other });
 
 const ringtone = document.getElementById('ringtone');
@@ -292,7 +293,6 @@ function playRingtone() {
     ringtone.currentTime = 0;
     ringtone.loop = true;
     ringtone.play().catch(e => console.log('Ringtone play failed:', e));
-    // إظهار مؤشر الرنين
     document.getElementById('ringingIndicator').style.display = 'inline-block';
     document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
 }
@@ -324,49 +324,58 @@ const iceServers = {
     ]
 };
 
+// استقبال إشارات WebRTC من الغرفة
 socket.on('signal', async (data) => {
-    if (data.from !== other.toString()) return;
-    if (!peerConnection) {
+    if (data.from === user.toString()) return; // تجاهل إشاراتنا
+    if (!data.signal) return;
+
+    try {
         if (data.signal.type === 'offer') {
-            await createPeerConnection(false);
+            // إذا لم يكن هناك اتصال، أنشئ واحداً
+            if (!peerConnection) {
+                await createPeerConnection(false);
+            }
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-            socket.emit('signal', { target: data.from, signal: answer });
+            socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
             callActive = true;
             updateCallUI('connected');
             stopRingtone();
             startCallTimer();
-        }
-        return;
-    }
-    try {
-        if (data.signal.type === 'offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('signal', { target: data.from, signal: answer });
-            updateCallUI('connected');
-            stopRingtone();
-            startCallTimer();
+            // تحديث call_id إذا ورد
+            if (data.call_id) currentCallId = data.call_id;
         } else if (data.signal.type === 'answer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            updateCallUI('connected');
-            stopRingtone();
-            startCallTimer();
+            if (peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+                updateCallUI('connected');
+                stopRingtone();
+                startCallTimer();
+            }
         } else if (data.signal.type === 'candidate') {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+            if (peerConnection) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+            }
         } else if (data.signal.type === 'end') {
             endCall();
         }
-    } catch (e) { console.error('Signal error:', e); }
+    } catch (e) {
+        console.error('Signal error:', e);
+    }
+});
+
+// استقبال call_id من الخادم
+socket.on('call_created', function(data) {
+    if (data.call_id) {
+        currentCallId = data.call_id;
+    }
 });
 
 async function createPeerConnection(isInitiator) {
     peerConnection = new RTCPeerConnection(iceServers);
     peerConnection.onicecandidate = (e) => {
         if (e.candidate) {
-            socket.emit('signal', { target: other.toString(), signal: { type: 'candidate', candidate: e.candidate } });
+            socket.emit('signal', { room: room, signal: { type: 'candidate', candidate: e.candidate }, call_id: currentCallId });
         }
     };
     peerConnection.ontrack = (e) => {
@@ -379,7 +388,13 @@ async function createPeerConnection(isInitiator) {
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
-            socket.emit('signal', { target: other.toString(), signal: offer });
+            // نرسل offer مع طلب إنشاء سجل مكالمة
+            socket.emit('signal', {
+                room: room,
+                signal: offer,
+                call_id: currentCallId,
+                video: callType === 'video'
+            });
             callActive = true;
             updateCallUI('connecting');
             playRingtone();
@@ -398,7 +413,8 @@ function startCall(video) {
     document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
     document.getElementById('callAvatar').textContent = '👤';
     document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
-    // إظهار مؤشر الرنين
+    // reset call id
+    currentCallId = null;
     document.getElementById('ringingIndicator').style.display = 'inline-block';
     document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
     document.getElementById('callTimer').textContent = '';
@@ -443,12 +459,23 @@ function stopCallTimer() {
 function endCall() {
     stopRingtone();
     stopCallTimer();
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
     callActive = false;
     document.getElementById('callWindow').classList.remove('active');
     document.getElementById('callAvatar').classList.add('pulse');
-    socket.emit('signal', { target: other.toString(), signal: { type: 'end' } });
+    // إرسال إشارة إنهاء مع call_id
+    socket.emit('signal', {
+        room: room,
+        signal: { type: 'end' },
+        call_id: currentCallId
+    });
 }
 
 function toggleMute() {
@@ -464,7 +491,6 @@ function toggleVideo() {
     }
 }
 function toggleSpeaker() {
-    // تغيير إخراج الصوت (يمكن تنفيذها لاحقاً)
     alert('🔊 سيتم تفعيل وضع السماعة الخارجية (قيد التطوير)');
 }
 

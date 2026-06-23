@@ -998,3 +998,77 @@ def delete_story(story_id):
     db.session.delete(story)
     db.session.commit()
     return jsonify({'success': True, 'message': 'تم حذف القصة'})
+
+# ===== دوال مساعدة لتسجيل المكالمات =====
+def create_call_log(caller_id, receiver_id, call_type):
+    call = CallLog(
+        caller_id=caller_id,
+        receiver_id=receiver_id,
+        call_type=call_type,
+        status='initiated'
+    )
+    db.session.add(call)
+    db.session.commit()
+    return call.id
+
+def update_call_log(call_id, status=None, end_time=None, duration=None):
+    call = db.session.get(CallLog, call_id)
+    if not call:
+        return
+    if status:
+        call.status = status
+    if end_time:
+        call.end_time = end_time
+    if duration is not None:
+        call.duration_seconds = duration
+    db.session.commit()
+
+# ===== تعديل دالة signal لبث الإشارات في الغرفة =====
+@socketio.on('signal')
+def handle_signal(data):
+    room = data.get('room')
+    signal = data.get('signal')
+    call_id = data.get('call_id')
+    from_user = session.get('username')
+    if not room or not signal or not from_user:
+        return
+
+    # إذا كانت الإشارة من نوع offer، نسجل بداية المكالمة
+    if signal.get('type') == 'offer' and call_id:
+        # نحدد المستخدمين من الغرفة (private_user1_user2)
+        parts = room.split('_')
+        if len(parts) == 3 and parts[0] == 'private':
+            user1 = int(parts[1])
+            user2 = int(parts[2])
+            caller = User.query.filter_by(username=from_user).first()
+            if caller:
+                receiver_id = user2 if caller.id == user1 else user1
+                # نستخدم call_id المرسل من العميل (تم إنشاؤه مسبقاً)
+                # ولكننا نتحقق من وجوده
+                call = db.session.get(CallLog, call_id)
+                if not call:
+                    # إذا لم يكن موجوداً، ننشئ واحداً
+                    call = CallLog(
+                        caller_id=caller.id,
+                        receiver_id=receiver_id,
+                        call_type=signal.get('video') and 'video' or 'voice',
+                        status='initiated'
+                    )
+                    db.session.add(call)
+                    db.session.commit()
+                    # نرسل call_id الجديد للعميل
+                    emit('call_created', {'call_id': call.id}, room=room)
+
+    # إذا كانت الإشارة من نوع end، ننهي المكالمة
+    if signal.get('type') == 'end' and call_id:
+        call = db.session.get(CallLog, call_id)
+        if call:
+            end_time = datetime.now(timezone.utc)
+            if call.start_time:
+                duration = (end_time - call.start_time).total_seconds()
+            else:
+                duration = 0
+            update_call_log(call_id, status='ended', end_time=end_time, duration=duration)
+
+    # نبث الإشارة للجميع في الغرفة (باستثناء المرسل)
+    emit('signal', {'from': from_user, 'signal': signal, 'call_id': call_id}, room=room, include_self=False)
