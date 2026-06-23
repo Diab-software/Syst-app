@@ -23,9 +23,7 @@
         flex-direction: column;
         animation: fadeIn 0.3s ease;
     }
-    .incoming-call.active {
-        display: flex;
-    }
+    .incoming-call.active { display: flex; }
     .incoming-call .call-card {
         background: var(--card);
         border-radius: 28px;
@@ -99,21 +97,15 @@
         color: white;
         box-shadow: 0 4px 14px rgba(16,185,129,0.4);
     }
-    .incoming-call .call-actions .accept:hover {
-        transform: scale(1.05);
-    }
+    .incoming-call .call-actions .accept:hover { transform: scale(1.05); }
     .incoming-call .call-actions .reject {
         background: #EF4444;
         color: white;
         box-shadow: 0 4px 14px rgba(239,68,68,0.4);
     }
-    .incoming-call .call-actions .reject:hover {
-        transform: scale(1.05);
-    }
+    .incoming-call .call-actions .reject:hover { transform: scale(1.05); }
     .incoming-call .call-actions .accept:active,
-    .incoming-call .call-actions .reject:active {
-        transform: scale(0.92);
-    }
+    .incoming-call .call-actions .reject:active { transform: scale(0.92); }
     .incoming-call .ringing-animation {
         display: inline-block;
         width: 16px;
@@ -420,7 +412,7 @@
 </div>
 
 <script>
-// ===== دوال JavaScript (مع إضافة شاشة المكالمة الواردة) =====
+// ===== دوال JavaScript مع إصلاح الصوت والخلط =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
@@ -435,7 +427,7 @@ socket.emit('join_private', { user_id: other });
 let peerConnection = null;
 let localStream = null;
 let callActive = false;
-let callType = 'voice';
+let callType = 'voice'; // 'voice' or 'video'
 let callTimerInterval = null;
 let callStartTime = null;
 let incomingOffer = null;
@@ -474,12 +466,10 @@ function showIncomingCall(caller, video) {
     `;
     screen.classList.add('active');
     playRingtone(true);
-    // إشعار Toast
     if (typeof showToast === 'function') {
         showToast(`📞 مكالمة ${video ? 'فيديو' : 'صوتية'} واردة من ${caller.display_name}`, 'call');
     }
 }
-
 function hideIncomingCall() {
     isIncomingCall = false;
     document.getElementById('incomingCall').classList.remove('active');
@@ -490,17 +480,27 @@ function hideIncomingCall() {
 async function acceptCall() {
     if (!incomingOffer) return;
     hideIncomingCall();
+    
+    // تحديد نوع المكالمة بناءً على incomingOffer
     callType = incomingOffer.video ? 'video' : 'voice';
+    
     const window = document.getElementById('callWindow');
     window.classList.add('active');
     document.getElementById('callTitle').textContent = callType === 'video' ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
     document.getElementById('callAvatar').textContent = '👤';
     document.getElementById('videoGrid').style.display = callType === 'video' ? 'grid' : 'none';
+    
+    // إنشاء peer connection (غير بادئ)
     await createPeerConnection(false);
+    
+    // تعيين الوصف البعيد (الـ offer)
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer.signal));
+    
+    // إنشاء الـ answer
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
+    
     callActive = true;
     updateCallUI('connected');
     stopRingtone();
@@ -519,7 +519,6 @@ function rejectCall() {
 socket.on('signal', async (data) => {
     if (data.from === user.toString()) return;
 
-    // إذا كانت إشارة رفض
     if (data.signal && data.signal.type === 'reject') {
         hideIncomingCall();
         stopRingtone();
@@ -527,7 +526,7 @@ socket.on('signal', async (data) => {
         return;
     }
 
-    // إذا كانت إشارة offer (مكالمة واردة)
+    // استقبال offer (مكالمة واردة)
     if (data.signal && data.signal.type === 'offer' && !callActive && !isIncomingCall) {
         incomingOffer = {
             signal: data.signal,
@@ -547,23 +546,12 @@ socket.on('signal', async (data) => {
         return;
     }
 
-    // إذا لم يكن هناك اتصال وليست مكالمة واردة، تجاهل
     if (!peerConnection) return;
 
     try {
         if (data.signal.type === 'offer') {
-            // إذا كنا في حالة مكالمة واردة ولكن لم نقبل بعد
-            if (isIncomingCall) {
-                // نقبل تلقائياً (لن يحدث لأننا نستخدم قبول يدوي)
-                return;
-            }
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
-            updateCallUI('connected');
-            stopRingtone();
-            startCallTimer();
+            // في حال وصول offer أثناء وجود peerConnection (نادراً)
+            return;
         } else if (data.signal.type === 'answer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
             updateCallUI('connected');
@@ -592,11 +580,24 @@ async function createPeerConnection(isInitiator) {
     peerConnection.ontrack = (e) => {
         document.getElementById('remoteVideo').srcObject = e.streams[0];
     };
+
+    // طلب الـ media (صوت وفيديو حسب النوع) وإضافة المسارات
+    try {
+        const constraints = { audio: true, video: callType === 'video' };
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        document.getElementById('localVideo').srcObject = localStream;
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+    } catch (e) {
+        alert('فشل الحصول على الصوت/الفيديو: ' + e);
+        endCall();
+        return;
+    }
+
     if (isInitiator) {
+        // إنشاء offer
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
-            document.getElementById('localVideo').srcObject = localStream;
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             socket.emit('signal', {
@@ -609,7 +610,7 @@ async function createPeerConnection(isInitiator) {
             updateCallUI('connecting');
             playRingtone(true);
         } catch (e) {
-            alert('فشل بدء المكالمة: ' + e);
+            alert('فشل إنشاء offer: ' + e);
             endCall();
         }
     }
@@ -618,7 +619,9 @@ async function createPeerConnection(isInitiator) {
 // ===== بدء مكالمة (من المتصل) =====
 function startCall(video) {
     if (callActive || isIncomingCall) return;
+    
     callType = video ? 'video' : 'voice';
+    
     const window = document.getElementById('callWindow');
     window.classList.add('active');
     document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
@@ -628,6 +631,7 @@ function startCall(video) {
     document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
     document.getElementById('callTimer').textContent = '';
     document.getElementById('ringingIndicator').style.display = 'inline-block';
+    
     createPeerConnection(true);
 }
 
@@ -702,14 +706,7 @@ function toggleSpeaker() {
     alert('🔊 سيتم تفعيل وضع السماعة الخارجية (قيد التطوير)');
 }
 
-// ===== إضافة مسار API للحصول على معلومات المستخدم =====
-// (سيتم إضافته في app.py بشكل منفصل)
-
-// ===== باقي الدوال (الرسائل، الإيموجي، المرفقات) =====
-// (نفس السابق، مختصر للاختصار)
-// ... (سأضيفها في التحديث الكامل)
-
-// ===== دوال الرسائل والإيموجي والمرفقات =====
+// ===== بقية الدوال (الرسائل، الإيموجي، المرفقات) =====
 let typingTimer = null;
 let isTyping = false;
 let mediaRecorder = null;
