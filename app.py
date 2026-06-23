@@ -956,6 +956,27 @@ def handle_signal(data):
     if not from_user or not target: return
     emit('signal', {'from': from_user, 'signal': signal_data, 'video': video}, to=target)
 
+@app.route("/story/<int:story_id>")
+def view_story(story_id):
+    user = get_user_by_session()
+    if not user: return redirect(url_for("login"))
+    story = db.session.get(Story, story_id)
+    if not story:
+        flash("القصة غير موجودة", "danger")
+        return redirect(url_for("dashboard"))
+    if story.expires_at.tzinfo is None:
+        expires_at = story.expires_at.replace(tzinfo=timezone.utc)
+    else:
+        expires_at = story.expires_at
+    if expires_at < datetime.now(timezone.utc):
+        flash("انتهت صلاحية القصة", "info")
+        return redirect(url_for("dashboard"))
+    if story.user_id != user.id and user.is_blocked(story.user_id):
+        flash("لا يمكنك رؤية هذه القصة", "danger")
+        return redirect(url_for("dashboard"))
+    return render_template("view_story.html", story=story, user=user)
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
