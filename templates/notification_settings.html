@@ -2,73 +2,226 @@
 {% block title %}إعدادات الإشعارات - Syst{% endblock %}
 {% block nav_title %}إعدادات الإشعارات{% endblock %}
 {% block content %}
-<div class="settings-card" style="max-width:600px;margin:0 auto;">
-    <h3 style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+<div style="max-width:600px;margin:0 auto;">
+
+    <!-- عنوان القسم -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-size:24px;color:white;box-shadow:0 4px 14px rgba(108,99,255,0.3);">
+            🔔
+        </div>
+        <div>
+            <h2 style="font-size:22px;font-weight:700;color:var(--text);margin:0;">إعدادات الإشعارات</h2>
+            <p style="font-size:14px;color:var(--text-light);margin:2px 0 0;">تحكم في كيفية تلقي الإشعارات داخل التطبيق</p>
+        </div>
+    </div>
+
+    <!-- بطاقة المعلومات -->
+    <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:16px;padding:20px 24px;margin-bottom:24px;color:white;box-shadow:0 4px 20px rgba(108,99,255,0.3);">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:28px;">💡</span>
+            <div>
+                <div style="font-weight:600;font-size:16px;">يمكنك تفعيل أو تعطيل أنواع الإشعارات</div>
+                <div style="font-size:13px;opacity:0.8;">الإشعارات الخارجية تتطلب إذن المتصفح</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة الإعدادات -->
+    <div style="background:var(--card);border-radius:20px;padding:8px;box-shadow:var(--shadow);border:1px solid var(--border);">
+
+        <!-- إشعارات الرسائل -->
+        <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:20px;">💬</div>
+                <div>
+                    <div style="font-weight:600;color:var(--text);font-size:16px;">إشعارات الرسائل</div>
+                    <div style="font-size:13px;color:var(--text-light);">تنبيه عند وصول رسالة جديدة</div>
+                </div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="msgNotifications" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- إشعارات المكالمات -->
+        <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#d1fae5;display:flex;align-items:center;justify-content:center;font-size:20px;">📞</div>
+                <div>
+                    <div style="font-weight:600;color:var(--text);font-size:16px;">إشعارات المكالمات</div>
+                    <div style="font-size:13px;color:var(--text-light);">تنبيه عند تلقي مكالمة واردة</div>
+                </div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="callNotifications" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- الصوت -->
+        <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:20px;">🔊</div>
+                <div>
+                    <div style="font-weight:600;color:var(--text);font-size:16px;">الصوت</div>
+                    <div style="font-size:13px;color:var(--text-light);">تشغيل صوت عند وصول الإشعارات</div>
+                </div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="soundNotifications" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- إشعارات خارج التطبيق -->
+        <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:20px;">📤</div>
+                <div>
+                    <div style="font-weight:600;color:var(--text);font-size:16px;">إشعارات خارج التطبيق</div>
+                    <div style="font-size:13px;color:var(--text-light);">إشعارات Web Push حتى عند إغلاق المتصفح</div>
+                </div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="pushNotifications" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- وضع عدم الإزعاج (ميزة إضافية) -->
+        <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:20px;">🌙</div>
+                <div>
+                    <div style="font-weight:600;color:var(--text);font-size:16px;">عدم الإزعاج</div>
+                    <div style="font-size:13px;color:var(--text-light);">إخفاء جميع الإشعارات مؤقتاً</div>
+                </div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="dndMode">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+    </div>
+
+    <!-- أزرار الإجراءات -->
+    <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+        <button onclick="saveNotificationSettings()" style="flex:1;padding:14px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:40px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.25s ease;box-shadow:0 4px 14px rgba(108,99,255,0.3);display:flex;align-items:center;justify-content:center;gap:8px;">
+            💾 حفظ الإعدادات
+        </button>
+        <button onclick="testNotification()" style="padding:14px 24px;background:#10B981;color:white;border:none;border-radius:40px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.25s ease;box-shadow:0 4px 14px rgba(16,185,129,0.3);display:flex;align-items:center;gap:8px;">
+            🔔 اختبار
+        </button>
+        <button onclick="resetNotificationSettings()" style="padding:14px 20px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:40px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.25s ease;">
+            🔄 إعادة تعيين
+        </button>
+    </div>
+
+    <!-- حالة الإذن -->
+    <div id="permissionStatus" style="margin-top:16px;padding:14px 18px;background:var(--bg-light);border-radius:12px;border:1px solid var(--border);font-size:14px;color:var(--text-light);display:flex;align-items:center;gap:10px;">
         <span>🔔</span>
-        <span>إعدادات الإشعارات</span>
-    </h3>
-    <div style="padding:16px;background:var(--bg-light);border-radius:var(--radius-sm);margin-bottom:16px;">
-        <p style="font-size:14px;color:var(--text-light);">
-            💡 يمكنك تفعيل أو تعطيل أنواع الإشعارات المختلفة. الإشعارات الخارجية تتطلب إذن المتصفح.
-        </p>
+        <span id="permissionText">حالة إذن الإشعارات: <span id="permissionValue" style="font-weight:600;color:var(--text);">غير محدد</span></span>
     </div>
-    <div class="settings-item">
-        <span>📨 إشعارات الرسائل</span>
-        <label class="switch">
-            <input type="checkbox" id="msgNotifications" checked>
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="settings-item">
-        <span>📞 إشعارات المكالمات</span>
-        <label class="switch">
-            <input type="checkbox" id="callNotifications" checked>
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="settings-item">
-        <span>🔊 الصوت</span>
-        <label class="switch">
-            <input type="checkbox" id="soundNotifications" checked>
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="settings-item">
-        <span>📤 إشعارات خارج التطبيق (Web Push)</span>
-        <label class="switch">
-            <input type="checkbox" id="pushNotifications" checked>
-            <span class="slider"></span>
-        </label>
-    </div>
-    <button onclick="saveNotificationSettings()" style="width:100%;margin-top:16px;">💾 حفظ الإعدادات</button>
-    <button onclick="testNotification()" style="width:100%;margin-top:8px;background:#10B981;">🔔 اختبار الإشعار</button>
 </div>
+
 <style>
-    .switch {
-        position:relative;display:inline-block;width:50px;height:28px;
+    /* ===== مفتاح التبديل (Toggle Switch) ===== */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 52px;
+        height: 28px;
+        flex-shrink: 0;
     }
-    .switch input { opacity:0;width:0;height:0; }
-    .slider {
-        position:absolute;cursor:pointer;inset:0;background:#ccc;transition:0.4s;border-radius:28px;
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
     }
-    .slider:before {
-        position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;
-        background:white;transition:0.4s;border-radius:50%;
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: #d1d5db;
+        transition: all 0.3s ease;
+        border-radius: 28px;
     }
-    input:checked + .slider { background:var(--primary); }
-    input:checked + .slider:before { transform:translateX(22px); }
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background: white;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+    }
+    .toggle-switch input:focus-visible + .toggle-slider {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+    }
+
+    /* ===== تأثيرات hover ===== */
+    .setting-item:hover {
+        background: var(--bg-light);
+        border-radius: 12px;
+        margin: 0 -4px;
+        padding-left: 22px !important;
+        padding-right: 22px !important;
+        transition: all 0.2s ease;
+    }
+    .setting-item {
+        transition: all 0.2s ease;
+        border-radius: 12px;
+        margin: 0;
+        padding: 16px 18px !important;
+        border-bottom: 1px solid var(--border);
+    }
+    .setting-item:last-child {
+        border-bottom: none;
+    }
+
+    /* ===== استجابة للشاشات الصغيرة ===== */
+    @media (max-width: 640px) {
+        .setting-item {
+            padding: 14px 14px !important;
+        }
+        .setting-item .toggle-switch {
+            width: 44px;
+            height: 24px;
+        }
+        .setting-item .toggle-slider:before {
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+        button[onclick="saveNotificationSettings()"] {
+            font-size: 14px;
+            padding: 12px;
+        }
+        button[onclick="testNotification()"] {
+            font-size: 14px;
+            padding: 12px 16px;
+        }
+    }
 </style>
+
 <script>
-function saveNotificationSettings() {
-    const settings = {
-        messages: document.getElementById('msgNotifications').checked,
-        calls: document.getElementById('callNotifications').checked,
-        sound: document.getElementById('soundNotifications').checked,
-        push: document.getElementById('pushNotifications').checked
-    };
-    localStorage.setItem('notificationSettings', JSON.stringify(settings));
-    alert('✅ تم حفظ إعدادات الإشعارات');
-}
+// ===== تحميل الإعدادات المحفوظة =====
 function loadNotificationSettings() {
     try {
         const saved = localStorage.getItem('notificationSettings');
@@ -78,15 +231,90 @@ function loadNotificationSettings() {
             document.getElementById('callNotifications').checked = settings.calls !== false;
             document.getElementById('soundNotifications').checked = settings.sound !== false;
             document.getElementById('pushNotifications').checked = settings.push !== false;
+            if (settings.dnd !== undefined) {
+                document.getElementById('dndMode').checked = settings.dnd;
+            }
         }
-    } catch(e) {}
+    } catch(e) { console.log('Error loading settings:', e); }
+    // تحديث حالة إذن الإشعارات
+    updatePermissionStatus();
 }
+
+// ===== حفظ الإعدادات =====
+function saveNotificationSettings() {
+    const settings = {
+        messages: document.getElementById('msgNotifications').checked,
+        calls: document.getElementById('callNotifications').checked,
+        sound: document.getElementById('soundNotifications').checked,
+        push: document.getElementById('pushNotifications').checked,
+        dnd: document.getElementById('dndMode').checked
+    };
+    localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    // عرض رسالة نجاح
+    showSaveFeedback('✅ تم حفظ الإعدادات بنجاح!');
+    // تطبيق الإعدادات على الفور
+    applySettings(settings);
+}
+
+// ===== تطبيق الإعدادات =====
+function applySettings(settings) {
+    // يمكن استخدامها لتطبيق الإعدادات على التطبيق فوراً
+    if (settings.dnd) {
+        document.getElementById('toastContainer').style.display = 'none';
+    } else {
+        document.getElementById('toastContainer').style.display = 'flex';
+    }
+    // يمكن إرسال الإعدادات إلى الخادم إذا أردت
+}
+
+// ===== عرض رسالة تأكيد =====
+function showSaveFeedback(message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        display:flex;align-items:center;gap:10px;padding:12px 16px;
+        background:var(--card);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);
+        border-right:4px solid #10B981;direction:rtl;
+        animation: slideIn 0.4s ease;
+    `;
+    toast.innerHTML = `
+        <span style="font-size:18px;">✅</span>
+        <span style="font-size:14px;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:16px;">✕</button>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(120%)';
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
+}
+
+// ===== إعادة تعيين الإعدادات =====
+function resetNotificationSettings() {
+    if (!confirm('⚠️ هل أنت متأكد من إعادة تعيين جميع الإعدادات إلى الوضع الافتراضي؟')) return;
+    document.getElementById('msgNotifications').checked = true;
+    document.getElementById('callNotifications').checked = true;
+    document.getElementById('soundNotifications').checked = true;
+    document.getElementById('pushNotifications').checked = true;
+    document.getElementById('dndMode').checked = false;
+    saveNotificationSettings();
+    showSaveFeedback('🔄 تم إعادة تعيين الإعدادات');
+}
+
+// ===== اختبار الإشعار =====
 function testNotification() {
     if (Notification.permission === 'granted') {
         new Notification('🔔 اختبار الإشعار', {
             body: 'هذا إشعار تجريبي من تطبيق Syst',
-            icon: '/static/icon-192.png'
+            icon: '/static/icon-192.png',
+            badge: '/static/icon-192.png',
+            vibrate: [200, 100, 200]
         });
+        showSaveFeedback('🔔 تم إرسال إشعار تجريبي');
+    } else if (Notification.permission === 'denied') {
+        alert('⚠️ لقد تم رفض إذن الإشعارات مسبقاً. يرجى تغيير الإعدادات من المتصفح.');
     } else {
         Notification.requestPermission().then(perm => {
             if (perm === 'granted') {
@@ -94,12 +322,41 @@ function testNotification() {
                     body: 'تم منح الإذن! هذا إشعار تجريبي.',
                     icon: '/static/icon-192.png'
                 });
+                showSaveFeedback('🔔 تم إرسال إشعار تجريبي');
             } else {
                 alert('⚠️ يرجى السماح بإشعارات المتصفح');
             }
         });
     }
+    updatePermissionStatus();
 }
-document.addEventListener('DOMContentLoaded', loadNotificationSettings);
+
+// ===== تحديث حالة إذن الإشعارات =====
+function updatePermissionStatus() {
+    const statusEl = document.getElementById('permissionValue');
+    if (!statusEl) return;
+    const permission = Notification.permission;
+    const statusMap = {
+        'granted': '🟢 ممنوح',
+        'denied': '🔴 مرفوض',
+        'default': '🟡 غير محدد'
+    };
+    statusEl.textContent = statusMap[permission] || permission;
+    statusEl.style.color = permission === 'granted' ? '#10B981' : permission === 'denied' ? '#EF4444' : '#F59E0B';
+}
+
+// ===== تهيئة الصفحة =====
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotificationSettings();
+    // إضافة الأنماط المفقودة للـ Toast
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+});
 </script>
 {% endblock %}
