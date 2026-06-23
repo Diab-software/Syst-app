@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}إعدادات الإشعارات - Syst{% endblock %}
+{% block nav_title %}إعدادات الإشعارات{% endblock %}
+{% block content %}
+<div class="settings-card" style="max-width:600px;margin:0 auto;">
+    <h3 style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <span>🔔</span>
+        <span>إعدادات الإشعارات</span>
+    </h3>
+    <div style="padding:16px;background:var(--bg-light);border-radius:var(--radius-sm);margin-bottom:16px;">
+        <p style="font-size:14px;color:var(--text-light);">
+            💡 يمكنك تفعيل أو تعطيل أنواع الإشعارات المختلفة. الإشعارات الخارجية تتطلب إذن المتصفح.
+        </p>
+    </div>
+    <div class="settings-item">
+        <span>📨 إشعارات الرسائل</span>
+        <label class="switch">
+            <input type="checkbox" id="msgNotifications" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="settings-item">
+        <span>📞 إشعارات المكالمات</span>
+        <label class="switch">
+            <input type="checkbox" id="callNotifications" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="settings-item">
+        <span>🔊 الصوت</span>
+        <label class="switch">
+            <input type="checkbox" id="soundNotifications" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="settings-item">
+        <span>📤 إشعارات خارج التطبيق (Web Push)</span>
+        <label class="switch">
+            <input type="checkbox" id="pushNotifications" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <button onclick="saveNotificationSettings()" style="width:100%;margin-top:16px;">💾 حفظ الإعدادات</button>
+    <button onclick="testNotification()" style="width:100%;margin-top:8px;background:#10B981;">🔔 اختبار الإشعار</button>
+</div>
+<style>
+    .switch {
+        position:relative;display:inline-block;width:50px;height:28px;
+    }
+    .switch input { opacity:0;width:0;height:0; }
+    .slider {
+        position:absolute;cursor:pointer;inset:0;background:#ccc;transition:0.4s;border-radius:28px;
+    }
+    .slider:before {
+        position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;
+        background:white;transition:0.4s;border-radius:50%;
+    }
+    input:checked + .slider { background:var(--primary); }
+    input:checked + .slider:before { transform:translateX(22px); }
+</style>
+<script>
+function saveNotificationSettings() {
+    const settings = {
+        messages: document.getElementById('msgNotifications').checked,
+        calls: document.getElementById('callNotifications').checked,
+        sound: document.getElementById('soundNotifications').checked,
+        push: document.getElementById('pushNotifications').checked
+    };
+    localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    alert('✅ تم حفظ إعدادات الإشعارات');
+}
+function loadNotificationSettings() {
+    try {
+        const saved = localStorage.getItem('notificationSettings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            document.getElementById('msgNotifications').checked = settings.messages !== false;
+            document.getElementById('callNotifications').checked = settings.calls !== false;
+            document.getElementById('soundNotifications').checked = settings.sound !== false;
+            document.getElementById('pushNotifications').checked = settings.push !== false;
+        }
+    } catch(e) {}
+}
+function testNotification() {
+    if (Notification.permission === 'granted') {
+        new Notification('🔔 اختبار الإشعار', {
+            body: 'هذا إشعار تجريبي من تطبيق Syst',
+            icon: '/static/icon-192.png'
+        });
+    } else {
+        Notification.requestPermission().then(perm => {
+            if (perm === 'granted') {
+                new Notification('🔔 اختبار الإشعار', {
+                    body: 'تم منح الإذن! هذا إشعار تجريبي.',
+                    icon: '/static/icon-192.png'
+                });
+            } else {
+                alert('⚠️ يرجى السماح بإشعارات المتصفح');
+            }
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', loadNotificationSettings);
+</script>
+{% endblock %}

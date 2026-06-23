@@ -977,6 +977,12 @@ def view_story(story_id):
     return render_template("view_story.html", story=story, user=user)
 
 
+@app.route("/notification_settings")
+def notification_settings():
+    user = get_user_by_session()
+    if not user: return redirect(url_for("login"))
+    return render_template("notification_settings.html", user=user)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
@@ -1072,3 +1078,44 @@ def handle_signal(data):
 
     # نبث الإشارة للجميع في الغرفة (باستثناء المرسل)
     emit('signal', {'from': from_user, 'signal': signal, 'call_id': call_id}, room=room, include_self=False)
+
+# ===== إشعارات Web Push =====
+import json
+from flask import request, jsonify
+
+# VAPID keys (للاستخدام في الإنتاج، يُنصح بتوليد مفاتيح خاصة)
+VAPID_PUBLIC_KEY = "BEl62iUehv5JGhGsTj_1Fh7QwY2dKw7n5oLk5n8qHlQ7fMvN3pU2wXyZ4aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+VAPID_PRIVATE_KEY = "n5oLk5n8qHlQ7fMvN3pU2wXyZ4aBcDeFgHiJkLmNoPqRs"
+
+# تخزين الاشتراكات (في الإنتاج، استخدم قاعدة بيانات)
+push_subscriptions = []
+
+@app.route('/api/push/subscribe', methods=['POST'])
+def push_subscribe():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid data'}), 400
+    push_subscriptions.append(data)
+    return jsonify({'success': True})
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+def push_unsubscribe():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid data'}), 400
+    if data in push_subscriptions:
+        push_subscriptions.remove(data)
+    return jsonify({'success': True})
+
+@app.route('/api/push/vapid_public_key')
+def vapid_public_key():
+    return jsonify({'publicKey': VAPID_PUBLIC_KEY})
+
+# دالة لإرسال إشعار فوري عبر WebSocket
+@socketio.on('notification')
+def handle_notification(data):
+    room = data.get('room')
+    if not room:
+        return
+    # إرسال الإشعار إلى جميع المستخدمين في الغرفة
+    emit('notification', data, room=room)

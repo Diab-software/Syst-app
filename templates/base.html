@@ -14,14 +14,28 @@
 <nav class="navbar">
     <div class="logo">💬 Syst <span>{% block nav_title %}دردشة{% endblock %}</span></div>
     <div class="right-section">
-        <!-- زر تبديل الوضع الليلي (عصري) -->
-        <button class="theme-toggle" onclick="toggleTheme(event)" title="تبديل الوضع الليلي" id="themeToggle">
-            <span class="icon" id="themeIcon">🌙</span>
-        </button>
+        <!-- زر تبديل الوضع الليلي -->
+        <button class="theme-toggle" onclick="toggleTheme()" title="تبديل الوضع الليلي" id="themeToggle">🌙</button>
+        <!-- عداد الإشعارات -->
+        <div class="notification-badge" id="notificationBadge" style="display:none;position:relative;">
+            <span class="badge-count" id="badgeCount">0</span>
+            <button class="notification-btn" onclick="toggleNotificationPanel()" title="الإشعارات">🔔</button>
+        </div>
         <span style="font-weight:500; color:white; font-size:14px;">{{ user.display_name if user else '' }}</span>
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
     </div>
 </nav>
+
+<!-- ===== لوحة الإشعارات ===== -->
+<div class="notification-panel" id="notificationPanel">
+    <div class="notification-header">
+        <span>🔔 الإشعارات</span>
+        <button onclick="clearNotifications()" style="background:none;border:none;color:var(--text-light);cursor:pointer;">🗑️ مسح الكل</button>
+    </div>
+    <div class="notification-list" id="notificationList">
+        <p style="color:var(--text-light);text-align:center;padding:20px;">لا توجد إشعارات</p>
+    </div>
+</div>
 
 <!-- ===== القائمة الجانبية ===== -->
 <div class="sidebar" id="sidebar">
@@ -46,6 +60,7 @@
         <a class="menu-item" href="/settings"><span class="icon">⚙️</span> الإعدادات</a>
         <a class="menu-item" href="/story_settings"><span class="icon">📖</span> إعدادات الستوري</a>
         <a class="menu-item" href="/call_log"><span class="icon">📋</span> سجل المكالمات</a>
+        <a class="menu-item" href="/notification_settings"><span class="icon">🔔</span> إعدادات الإشعارات</a>
         <a class="menu-item logout" href="/logout"><span class="icon">🚪</span> خروج</a>
     </div>
 </div>
@@ -55,68 +70,321 @@
     {% block content %}{% endblock %}
 </div>
 
+<!-- ===== Toast الإشعارات ===== -->
+<div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:360px;width:100%;direction:rtl;"></div>
+
 <script>
-    // ===== وظائف القائمة الجانبية =====
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.toggle('open');
+// ===== وظائف القائمة الجانبية =====
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.toggle('open');
+}
+document.addEventListener('click', function(event) {
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.querySelector('.hamburger');
+    if (sidebar && sidebar.classList.contains('open')) {
+        if (!sidebar.contains(event.target) && !hamburger.contains(event.target)) {
+            sidebar.classList.remove('open');
+        }
     }
-    document.addEventListener('click', function(event) {
-        const sidebar = document.getElementById('sidebar');
-        const hamburger = document.querySelector('.hamburger');
-        if (sidebar && sidebar.classList.contains('open')) {
-            if (!sidebar.contains(event.target) && !hamburger.contains(event.target)) {
-                sidebar.classList.remove('open');
-            }
+});
+
+// ===== وظيفة تبديل الوضع الليلي =====
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? '' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    const btn = document.getElementById('themeToggle');
+    if (btn) {
+        btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    }
+}
+(function() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        const btn = document.getElementById('themeToggle');
+        if (btn) btn.textContent = '☀️';
+    }
+})();
+
+// ===== نظام الإشعارات =====
+let notifications = [];
+let notificationSound = null;
+
+// تحميل صوت الإشعار
+function loadNotificationSound() {
+    try {
+        notificationSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        notificationSound.volume = 0.3;
+    } catch(e) { console.log('Sound not supported'); }
+}
+
+// عرض Toast إشعار
+function showToast(message, type = 'info', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', call: '📞', message: '💬' };
+    toast.innerHTML = `
+        <span style="font-size:20px;">${icons[type] || '📨'}</span>
+        <span style="flex:1;font-size:14px;line-height:1.4;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:18px;">✕</button>
+    `;
+    container.appendChild(toast);
+    // تشغيل الصوت
+    if (notificationSound) {
+        notificationSound.currentTime = 0;
+        notificationSound.play().catch(e => console.log('Sound error:', e));
+    }
+    // إضافة تأثير دخول
+    setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+    // إزالة تلقائية
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, duration);
+    // إضافة إلى لوحة الإشعارات
+    addToNotificationPanel(message, type, new Date());
+}
+
+// إضافة إلى لوحة الإشعارات
+function addToNotificationPanel(message, type, time) {
+    notifications.unshift({ message, type, time });
+    if (notifications.length > 50) notifications.pop();
+    updateNotificationBadge();
+    updateNotificationPanel();
+}
+
+// تحديث عداد الإشعارات
+function updateNotificationBadge() {
+    const badge = document.getElementById('notificationBadge');
+    const count = document.getElementById('badgeCount');
+    const unread = notifications.filter(n => !n.read).length;
+    if (unread > 0) {
+        badge.style.display = 'block';
+        count.textContent = unread > 99 ? '99+' : unread;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// تحديث لوحة الإشعارات
+function updateNotificationPanel() {
+    const list = document.getElementById('notificationList');
+    if (notifications.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">لا توجد إشعارات</p>';
+        return;
+    }
+    let html = '';
+    notifications.forEach((n, i) => {
+        const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', call: '📞', message: '💬' };
+        const timeStr = n.time ? new Date(n.time).toLocaleTimeString('ar') : '';
+        html += `
+            <div class="notification-item" onclick="markAsRead(${i})" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;background:${n.read ? 'transparent' : 'var(--bg-light)'};border-radius:8px;margin:2px 0;">
+                <span style="font-size:20px;">${icons[n.type] || '📨'}</span>
+                <div style="flex:1;">
+                    <div style="font-size:14px;color:var(--text);">${n.message}</div>
+                    <div style="font-size:11px;color:var(--text-light);">${timeStr}</div>
+                </div>
+                ${n.read ? '' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--primary);"></span>'}
+            </div>
+        `;
+    });
+    list.innerHTML = html;
+}
+
+function markAsRead(index) {
+    if (notifications[index]) {
+        notifications[index].read = true;
+        updateNotificationBadge();
+        updateNotificationPanel();
+    }
+}
+
+function clearNotifications() {
+    notifications = [];
+    updateNotificationBadge();
+    updateNotificationPanel();
+    document.getElementById('notificationPanel').classList.remove('active');
+}
+
+function toggleNotificationPanel() {
+    document.getElementById('notificationPanel').classList.toggle('active');
+}
+
+// استقبال إشعارات WebSocket
+if (typeof socket !== 'undefined') {
+    socket.on('notification', function(data) {
+        const message = data.message || 'لديك إشعار جديد';
+        const type = data.type || 'info';
+        const room = data.room || '';
+        // عرض Toast
+        showToast(message, type);
+        // إذا كانت مكالمة، نعطي أولوية أعلى
+        if (type === 'call') {
+            // تشغيل نغمة رنين
+            try {
+                const ring = new Audio('https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1');
+                ring.volume = 0.5;
+                ring.play().catch(e => console.log('Ring error:', e));
+            } catch(e) {}
         }
     });
+}
 
-    // ===== وظيفة تبديل الوضع الليلي (مع تأثيرات حركية) =====
-    function toggleTheme(event) {
-        const html = document.documentElement;
-        const currentTheme = html.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? '' : 'dark';
-        html.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
+// إشعارات Web Push (Service Worker)
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+    navigator.serviceWorker.register('/static/sw.js')
+        .then(function(registration) {
+            console.log('Service Worker registered:', registration);
+            // طلب إذن الإشعارات
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        subscribeToPush(registration);
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                subscribeToPush(registration);
+            }
+        })
+        .catch(function(err) {
+            console.log('Service Worker registration failed:', err);
+        });
+}
 
-        const icon = document.getElementById('themeIcon');
-        if (icon) {
-            // دوران الأيقونة مع تغييرها
-            icon.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
-            icon.style.transform = 'rotate(360deg)';
-            setTimeout(() => {
-                icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-                icon.style.transform = 'rotate(0deg)';
-            }, 300);
-        }
+function subscribeToPush(registration) {
+    // الحصول على المفتاح العام من الخادم
+    fetch('/api/push/vapid_public_key')
+        .then(r => r.json())
+        .then(data => {
+            const publicKey = data.publicKey;
+            if (!publicKey) return;
+            const applicationServerKey = urlBase64ToUint8Array(publicKey);
+            registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            })
+            .then(subscription => {
+                console.log('Push subscription:', subscription);
+                // إرسال الاشتراك إلى الخادم
+                fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(subscription)
+                });
+            })
+            .catch(err => console.log('Push subscription failed:', err));
+        });
+}
 
-        // تأثير تموج (Ripple) عند النقر
-        if (event) {
-            const btn = event.currentTarget;
-            const rect = btn.getBoundingClientRect();
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            const size = Math.max(rect.width, rect.height);
-            ripple.style.width = ripple.style.height = size + 'px';
-            ripple.style.left = (event.clientX - rect.left - size/2) + 'px';
-            ripple.style.top = (event.clientY - rect.top - size/2) + 'px';
-            btn.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
-        }
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
     }
+    return outputArray;
+}
 
-    // ===== استعادة الوضع الليلي من localStorage =====
-    (function() {
-        const savedTheme = localStorage.getItem('theme');
-        const icon = document.getElementById('themeIcon');
-        if (savedTheme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            if (icon) icon.textContent = '☀️';
+// تهيئة عند التحميل
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotificationSound();
+    // إضافة أنماط CSS للـ Toast
+    const style = document.createElement('style');
+    style.textContent = `
+        .toast {
+            display:flex;align-items:center;gap:10px;padding:12px 16px;
+            background:var(--card);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);
+            border-right:4px solid var(--primary);transform:translateX(120%);opacity:0;
+            transition:all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            direction:rtl;
         }
-    })();
+        .toast-success { border-right-color: #10B981; }
+        .toast-error { border-right-color: #EF4444; }
+        .toast-warning { border-right-color: #F59E0B; }
+        .toast-call { border-right-color: #3B82F6; animation: callPulse 1s ease-in-out infinite; }
+        @keyframes callPulse { 0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,0.3);} 50%{box-shadow:0 0 20px 5px rgba(59,130,246,0.1);} }
+        .notification-panel {
+            display:none;position:fixed;top:70px;right:20px;width:340px;max-height:400px;
+            background:var(--card);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.15);
+            z-index:1001;border:1px solid var(--border);overflow:hidden;
+        }
+        .notification-panel.active { display:block; }
+        .notification-header {
+            display:flex;justify-content:space-between;align-items:center;
+            padding:12px 16px;border-bottom:1px solid var(--border);
+            font-weight:600;color:var(--text);
+        }
+        .notification-list { max-height:320px;overflow-y:auto;padding:4px 8px; }
+        .notification-badge { display:flex;align-items:center;position:relative; }
+        .badge-count {
+            position:absolute;top:-6px;right:-6px;background:#EF4444;color:white;
+            border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+        }
+        .notification-btn {
+            background:rgba(255,255,255,0.15);border:none;border-radius:50%;
+            width:38px;height:38px;font-size:18px;cursor:pointer;color:white;
+            transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;
+        }
+        .notification-btn:hover { background:rgba(255,255,255,0.25);transform:scale(1.05); }
+        @media (max-width:640px) {
+            .notification-panel { width:300px;right:10px;top:60px;max-height:350px; }
+            .toast { max-width:300px;font-size:13px;padding:10px 14px; }
+        }
+    `;
+    document.head.appendChild(style);
+});
 
-    // ===== كود إضافي من القوالب الفرعية =====
-    {% block extra_js %}{% endblock %}
+// دوال إضافية للاستخدام في القوالب الفرعية
+function notifyNewMessage(from, message) {
+    showToast(`💬 رسالة من ${from}: ${message}`, 'message');
+    // إرسال إشعار WebSocket للآخرين في الغرفة (إن أمكن)
+    if (typeof socket !== 'undefined') {
+        socket.emit('notification', {
+            room: socket.room || 'global',
+            message: `💬 رسالة من ${from}`,
+            type: 'message'
+        });
+    }
+}
+
+function notifyIncomingCall(from) {
+    showToast(`📞 مكالمة واردة من ${from}`, 'call');
+    // تشغيل نغمة رنين
+    try {
+        const ring = new Audio('https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1');
+        ring.volume = 0.5;
+        ring.loop = true;
+        ring.play().catch(e => console.log('Ring error:', e));
+        // إيقاف بعد 30 ثانية أو عند الرد
+        setTimeout(() => { ring.pause(); ring.currentTime = 0; }, 30000);
+    } catch(e) {}
+}
+
+// دالة لإرسال إشعار Web Push (تُستدعى من الخادم)
+function sendPushNotification(title, body, url) {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+                body: body,
+                icon: '/static/icon-192.png',
+                badge: '/static/icon-192.png',
+                data: { url: url || '/' },
+                vibrate: [200, 100, 200]
+            });
+        });
+    }
+}
 </script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>
