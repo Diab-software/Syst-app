@@ -7,6 +7,128 @@
     <source src="https://www.zapsplat.com/wp-content/uploads/2015/04/Zapsplat_Telephone_phone_ringing_old_fashioned_landline_ring_003_2015.mp3?_=1" type="audio/mpeg">
 </audio>
 <style>
+    /* ===== أنماط المكالمة الواردة ===== */
+    .incoming-call {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(10px);
+        z-index: 5000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        animation: fadeIn 0.3s ease;
+    }
+    .incoming-call.active {
+        display: flex;
+    }
+    .incoming-call .call-card {
+        background: var(--card);
+        border-radius: 28px;
+        padding: 32px 24px;
+        max-width: 380px;
+        width: 92%;
+        text-align: center;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+        animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes slideUp {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .incoming-call .caller-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        margin: 0 auto 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        color: white;
+        border: 3px solid rgba(255,255,255,0.2);
+    }
+    .incoming-call .caller-name {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .incoming-call .caller-username {
+        font-size: 14px;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+    .incoming-call .call-type {
+        font-size: 16px;
+        color: var(--text-light);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .incoming-call .call-actions {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .incoming-call .call-actions button {
+        padding: 14px 32px;
+        border-radius: 40px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .incoming-call .call-actions .accept {
+        background: #10B981;
+        color: white;
+        box-shadow: 0 4px 14px rgba(16,185,129,0.4);
+    }
+    .incoming-call .call-actions .accept:hover {
+        transform: scale(1.05);
+    }
+    .incoming-call .call-actions .reject {
+        background: #EF4444;
+        color: white;
+        box-shadow: 0 4px 14px rgba(239,68,68,0.4);
+    }
+    .incoming-call .call-actions .reject:hover {
+        transform: scale(1.05);
+    }
+    .incoming-call .call-actions .accept:active,
+    .incoming-call .call-actions .reject:active {
+        transform: scale(0.92);
+    }
+    .incoming-call .ringing-animation {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background: #10B981;
+        border-radius: 50%;
+        animation: ringPulse 0.8s ease-in-out infinite;
+        margin-left: 6px;
+    }
+    @keyframes ringPulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.8); opacity: 0.4; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    /* ===== تحسينات عامة ===== */
     .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0.5; transition: opacity 0.2s; }
     .msg:hover .msg-actions { opacity: 1; }
     .msg-actions button {
@@ -131,6 +253,8 @@
         .input-area .btn-group .icon-btn { width: 36px; height: 36px; font-size: 15px; }
         .input-area .btn-group .send-btn { width: 40px; height: 40px; font-size: 18px; }
         .attach-menu { min-width: 140px; left: 0; right: 0; margin: 0 auto; }
+        .incoming-call .call-card { padding: 24px 16px; }
+        .incoming-call .caller-avatar { width: 70px; height: 70px; font-size: 32px; }
     }
 </style>
 {% endblock %}
@@ -257,7 +381,7 @@
     </div>
 </div>
 
-<!-- ===== نافذة المكالمة ===== -->
+<!-- ===== نافذة المكالمة (أثناء الاتصال) ===== -->
 <div class="call-window" id="callWindow">
     <div class="call-avatar pulse" id="callAvatar">👤</div>
     <div class="call-title" id="callTitle">📞 مكالمة</div>
@@ -278,35 +402,34 @@
     </div>
 </div>
 
+<!-- ===== شاشة المكالمة الواردة ===== -->
+<div class="incoming-call" id="incomingCall">
+    <div class="call-card">
+        <div class="caller-avatar" id="incomingAvatar">👤</div>
+        <div class="caller-name" id="incomingName">المتصل</div>
+        <div class="caller-username" id="incomingUsername">@user</div>
+        <div class="call-type" id="incomingType">
+            <span class="ringing-animation"></span>
+            <span>مكالمة واردة...</span>
+        </div>
+        <div class="call-actions">
+            <button class="accept" onclick="acceptCall()">✅ قبول</button>
+            <button class="reject" onclick="rejectCall()">❌ رفض</button>
+        </div>
+    </div>
+</div>
+
 <script>
-// ===== دوال JavaScript مع إصلاح المكالمات =====
+// ===== دوال JavaScript (مع إضافة شاشة المكالمة الواردة) =====
 const socket = io();
 const user = {{ user.id }};
 const other = {{ other.id }};
 const room = `private_${Math.min(user, other)}_${Math.max(user, other)}`;
 let currentCallId = null;
+let isIncomingCall = false;
+let isCallActive = false;
 
 socket.emit('join_private', { user_id: other });
-
-const ringtone = document.getElementById('ringtone');
-function playRingtone() {
-    ringtone.currentTime = 0;
-    ringtone.loop = true;
-    ringtone.play().catch(e => console.log('Ringtone play failed:', e));
-    document.getElementById('ringingIndicator').style.display = 'inline-block';
-    document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
-}
-function stopRingtone() {
-    ringtone.pause();
-    ringtone.currentTime = 0;
-    document.getElementById('ringingIndicator').style.display = 'none';
-}
-
-let typingTimer = null;
-let isTyping = false;
-let mediaRecorder = null;
-let audioChunks = [];
-let selectedImage = null;
 
 // ===== دوال المكالمات =====
 let peerConnection = null;
@@ -315,6 +438,8 @@ let callActive = false;
 let callType = 'voice';
 let callTimerInterval = null;
 let callStartTime = null;
+let incomingOffer = null;
+let incomingCaller = null;
 
 const iceServers = {
     iceServers: [
@@ -324,34 +449,126 @@ const iceServers = {
     ]
 };
 
-// استقبال إشارات WebRTC من الغرفة
+// ===== نغمة الرنين =====
+const ringtone = document.getElementById('ringtone');
+function playRingtone(loop = true) {
+    ringtone.currentTime = 0;
+    ringtone.loop = loop;
+    ringtone.play().catch(e => console.log('Ringtone play failed:', e));
+}
+function stopRingtone() {
+    ringtone.pause();
+    ringtone.currentTime = 0;
+}
+
+// ===== عرض/إخفاء شاشة المكالمة الواردة =====
+function showIncomingCall(caller, video) {
+    isIncomingCall = true;
+    const screen = document.getElementById('incomingCall');
+    document.getElementById('incomingAvatar').textContent = '👤';
+    document.getElementById('incomingName').textContent = caller.display_name || 'المتصل';
+    document.getElementById('incomingUsername').textContent = '@' + (caller.username || '');
+    document.getElementById('incomingType').innerHTML = `
+        <span class="ringing-animation"></span>
+        <span>${video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية'} واردة...</span>
+    `;
+    screen.classList.add('active');
+    playRingtone(true);
+    // إشعار Toast
+    if (typeof showToast === 'function') {
+        showToast(`📞 مكالمة ${video ? 'فيديو' : 'صوتية'} واردة من ${caller.display_name}`, 'call');
+    }
+}
+
+function hideIncomingCall() {
+    isIncomingCall = false;
+    document.getElementById('incomingCall').classList.remove('active');
+    stopRingtone();
+}
+
+// ===== قبول المكالمة =====
+async function acceptCall() {
+    if (!incomingOffer) return;
+    hideIncomingCall();
+    callType = incomingOffer.video ? 'video' : 'voice';
+    const window = document.getElementById('callWindow');
+    window.classList.add('active');
+    document.getElementById('callTitle').textContent = callType === 'video' ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
+    document.getElementById('callAvatar').textContent = '👤';
+    document.getElementById('videoGrid').style.display = callType === 'video' ? 'grid' : 'none';
+    await createPeerConnection(false);
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer.signal));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
+    callActive = true;
+    updateCallUI('connected');
+    stopRingtone();
+    startCallTimer();
+}
+
+// ===== رفض المكالمة =====
+function rejectCall() {
+    hideIncomingCall();
+    socket.emit('signal', { room: room, signal: { type: 'reject' }, call_id: currentCallId });
+    incomingOffer = null;
+    stopRingtone();
+}
+
+// ===== استقبال إشارات WebRTC =====
 socket.on('signal', async (data) => {
-    if (data.from === user.toString()) return; // تجاهل إشاراتنا
-    if (!data.signal) return;
+    if (data.from === user.toString()) return;
+
+    // إذا كانت إشارة رفض
+    if (data.signal && data.signal.type === 'reject') {
+        hideIncomingCall();
+        stopRingtone();
+        alert('❌ تم رفض المكالمة');
+        return;
+    }
+
+    // إذا كانت إشارة offer (مكالمة واردة)
+    if (data.signal && data.signal.type === 'offer' && !callActive && !isIncomingCall) {
+        incomingOffer = {
+            signal: data.signal,
+            video: data.video || false,
+            caller: data.from
+        };
+        // جلب معلومات المتصل
+        fetch(`/api/user/${data.from}`)
+            .then(r => r.json())
+            .then(caller => {
+                showIncomingCall(caller, data.video || false);
+            })
+            .catch(() => {
+                showIncomingCall({ display_name: data.from, username: data.from }, data.video || false);
+            });
+        if (data.call_id) currentCallId = data.call_id;
+        return;
+    }
+
+    // إذا لم يكن هناك اتصال وليست مكالمة واردة، تجاهل
+    if (!peerConnection) return;
 
     try {
         if (data.signal.type === 'offer') {
-            // إذا لم يكن هناك اتصال، أنشئ واحداً
-            if (!peerConnection) {
-                await createPeerConnection(false);
+            // إذا كنا في حالة مكالمة واردة ولكن لم نقبل بعد
+            if (isIncomingCall) {
+                // نقبل تلقائياً (لن يحدث لأننا نستخدم قبول يدوي)
+                return;
             }
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             socket.emit('signal', { room: room, signal: answer, call_id: currentCallId });
-            callActive = true;
             updateCallUI('connected');
             stopRingtone();
             startCallTimer();
-            // تحديث call_id إذا ورد
-            if (data.call_id) currentCallId = data.call_id;
         } else if (data.signal.type === 'answer') {
-            if (peerConnection) {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
-                updateCallUI('connected');
-                stopRingtone();
-                startCallTimer();
-            }
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            updateCallUI('connected');
+            stopRingtone();
+            startCallTimer();
         } else if (data.signal.type === 'candidate') {
             if (peerConnection) {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
@@ -364,13 +581,7 @@ socket.on('signal', async (data) => {
     }
 });
 
-// استقبال call_id من الخادم
-socket.on('call_created', function(data) {
-    if (data.call_id) {
-        currentCallId = data.call_id;
-    }
-});
-
+// ===== إنشاء اتصال WebRTC =====
 async function createPeerConnection(isInitiator) {
     peerConnection = new RTCPeerConnection(iceServers);
     peerConnection.onicecandidate = (e) => {
@@ -388,7 +599,6 @@ async function createPeerConnection(isInitiator) {
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
-            // نرسل offer مع طلب إنشاء سجل مكالمة
             socket.emit('signal', {
                 room: room,
                 signal: offer,
@@ -397,7 +607,7 @@ async function createPeerConnection(isInitiator) {
             });
             callActive = true;
             updateCallUI('connecting');
-            playRingtone();
+            playRingtone(true);
         } catch (e) {
             alert('فشل بدء المكالمة: ' + e);
             endCall();
@@ -405,22 +615,23 @@ async function createPeerConnection(isInitiator) {
     }
 }
 
+// ===== بدء مكالمة (من المتصل) =====
 function startCall(video) {
-    if (callActive) return;
+    if (callActive || isIncomingCall) return;
     callType = video ? 'video' : 'voice';
     const window = document.getElementById('callWindow');
     window.classList.add('active');
     document.getElementById('callTitle').textContent = video ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية';
     document.getElementById('callAvatar').textContent = '👤';
     document.getElementById('videoGrid').style.display = video ? 'grid' : 'none';
-    // reset call id
     currentCallId = null;
-    document.getElementById('ringingIndicator').style.display = 'inline-block';
     document.getElementById('callStatusText').textContent = '⏳ جارٍ الاتصال...';
     document.getElementById('callTimer').textContent = '';
+    document.getElementById('ringingIndicator').style.display = 'inline-block';
     createPeerConnection(true);
 }
 
+// ===== تحديث واجهة المكالمة =====
 function updateCallUI(status) {
     const statusText = document.getElementById('callStatusText');
     if (status === 'connecting') {
@@ -468,14 +679,11 @@ function endCall() {
         localStream = null;
     }
     callActive = false;
+    isIncomingCall = false;
     document.getElementById('callWindow').classList.remove('active');
     document.getElementById('callAvatar').classList.add('pulse');
-    // إرسال إشارة إنهاء مع call_id
-    socket.emit('signal', {
-        room: room,
-        signal: { type: 'end' },
-        call_id: currentCallId
-    });
+    document.getElementById('incomingCall').classList.remove('active');
+    socket.emit('signal', { room: room, signal: { type: 'end' }, call_id: currentCallId });
 }
 
 function toggleMute() {
@@ -494,7 +702,20 @@ function toggleSpeaker() {
     alert('🔊 سيتم تفعيل وضع السماعة الخارجية (قيد التطوير)');
 }
 
-// ===== دوال الرسائل والإيموجي والمرفقات (نفس السابق) =====
+// ===== إضافة مسار API للحصول على معلومات المستخدم =====
+// (سيتم إضافته في app.py بشكل منفصل)
+
+// ===== باقي الدوال (الرسائل، الإيموجي، المرفقات) =====
+// (نفس السابق، مختصر للاختصار)
+// ... (سأضيفها في التحديث الكامل)
+
+// ===== دوال الرسائل والإيموجي والمرفقات =====
+let typingTimer = null;
+let isTyping = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let selectedImage = null;
+
 socket.on('new_message', function(data) {
     if (data.private_with != other && data.user_id != other) return;
     appendMessage(data);

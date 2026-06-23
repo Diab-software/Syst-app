@@ -983,6 +983,19 @@ def notification_settings():
     if not user: return redirect(url_for("login"))
     return render_template("notification_settings.html", user=user)
 
+@app.route("/api/user/<username>")
+def api_user(username):
+    user = User.query.filter_by(username=username, deleted=False).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "display_name": user.display_name,
+        "profile_pic": user.profile_pic,
+        "status": user.status
+    })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7070))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
