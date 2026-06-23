@@ -786,3 +786,20 @@ input:checked + .slider:before { transform: translateX(22px); }
     .notification-panel { width: 300px; right: 10px; top: 60px; max-height: 350px; }
     .toast { max-width: 300px; font-size: 13px; padding: 10px 14px; }
 }
+
+/* ===== تحسين تصميم الرسالة الصوتية ===== */
+.msg audio {
+    width: 100%;
+    max-width: 280px;
+    border-radius: 30px;
+    background: transparent;
+    padding: 4px 0;
+    margin-top: 6px;
+    display: block;
+}
+.my-msg audio::-webkit-media-controls-panel {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+}
+.other-msg audio::-webkit-media-controls-panel {
+    background: #f3f4f6;
+}
